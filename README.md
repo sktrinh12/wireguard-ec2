@@ -25,3 +25,9 @@ wvpn() {
   fi
 }
 ```
+
+In order for `main.sh` to work without interaction, you will probably need to add these two entries in sudodoers list (`sudo visudo`) in order to run sudo without password prompt:
+```
+user ALL=(ALL) NOPASSWD: /bin/cp /etc/wireguard/wg0.conf
+user ALL=(ALL) NOPASSWD: /usr/bin/wg-quick
+```
