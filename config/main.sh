@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Exit immediately if any command fails
+set -e
+
+# Function to handle errors and exit
+handle_error() {
+  echo "Error occurred. Exiting..."
+  exit 1
+}
+
+# Trap any errors and call the handle_error function
+trap 'handle_error' ERR
+
 cwd=$(pwd)
 echo "Changing directory to terraform project..."
 cd $HOME/Documents/scripts/terraform/wireguard-ec2
@@ -11,12 +23,15 @@ up_vpn() {
   CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 
   echo -e "=========================\nCLIENT KEYS GENERATED\n========================="
-  echo "Client Private Key: $CIENT_PRIVATE_KEY"
+  echo "Client Private Key: $CLIENT_PRIVATE_KEY"
   echo "Client Public Key: $CLIENT_PUBLIC_KEY"
 
   # deploy ec2 wireguard
   echo "Deploying EC2 WireGuard with Terraform..."
-  terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}"
+  terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" || {
+  echo "Terraform apply failed."
+  exit 1
+}
 
   # retrieve public IP and server public key
   echo "Retrieving public IP and server public key..."
@@ -45,10 +60,9 @@ up_vpn() {
   PersistentKeepalive = 25
 EOC
 
-  # Write the configuration to the final location with sudo
-  sudo tee /etc/wireguard/wg0.conf < $TEMP_CONF
+  sudo cp $TEMP_CONF /etc/wireguard/wg0.conf
 
-  # Clean up temporary file
+  # Clean up the temporary file
   rm $TEMP_CONF
 
   echo -e "=========================\nWIREGUARD CONFIGURED\n========================="
@@ -60,7 +74,7 @@ EOC
 # Function to bring down WireGuard VPN
 down_vpn() {
     echo "Tearing down WireGuard VPN..."
-    sudo wg-quick down wg0
+    sudo wg-quick down wg0 || true
     echo "WireGuard VPN is down."
 
     echo "Destroying EC2 WireGuard deployment with Terraform..."
@@ -82,4 +96,6 @@ case "$1" in
         ;;
 esac
 
+PUBLIC_IP=$(curl -sS icanhazip.com)
+curl -sS http://ip-api.com/json/$PUBLIC_IP | jq .
 cd $cwd
