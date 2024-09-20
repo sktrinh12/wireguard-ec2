@@ -2,6 +2,7 @@
 
 # Exit immediately if any command fails
 set -e
+placeholder=""
 
 # Check for correct number of arguments
 if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
@@ -63,7 +64,7 @@ up_vpn() {
 
 # Function to bring down WireGuard VPN
 down_vpn() {
-    echo "Destroying EC2 WireGuard deployment with Terraform..."
+    echo "Destroying EC2 WireGuard Terraform deployment..."
     terraform destroy -auto-approve -var "client_public_key=${CLIENT_PUBLIC_KEY}"
     echo "EC2 WireGuard deployment destroyed."
 }
@@ -129,16 +130,18 @@ config_current_device() {
   PersistentKeepalive = 25
 EOC
 
+  echo "replacing 'wg0.conf' file"
   sudo cp $TEMP_CONF /etc/wireguard/wg0.conf
   # Clean up the temporary file
   rm $TEMP_CONF
+  echo "activating wg interface"
   sudo wg-quick up wg0
 }
 
 remove_router_config() {
   echo "Removing WireGuard configuration from router..."
   ssh "$USERNAME@$ROUTER_IP" << EOF
-    # Remove the WireGuard interface configuration
+    # Remove the WireGuard interface configuration 
     uci -q delete network.wgserver
 
     # Remove the peer configuration
@@ -148,6 +151,25 @@ remove_router_config() {
     service network restart
 EOF
 }
+
+if [ "$1" = "down" ]; then
+  placeholder="de-"
+fi
+
+# validate second argument
+case "$2" in
+  0)
+    echo -e "=========================\n${placeholder}configuring for router client\n========================="
+    ;;
+  1)
+    echo -e "=========================\n${placeholder}configuring for current device client\n========================="
+    ;;
+  *)
+    echo -e "=========================\n$2 - is not a valid argument\n========================="
+    exit 1
+    ;;
+esac
+
 
 # Main logic to handle arguments
 case "$1" in
@@ -161,12 +183,12 @@ case "$1" in
         echo -e "=========================\nWIREGUARD CONFIGURED\n========================="
         ;;
     down)
-        down_vpn
         if [ "$2" = "0" ]; then
           remove_router_config
         elif [ "$2" = "1" ]; then
           remove_device_config
         fi
+        down_vpn
         echo -e "=========================\nWIREGUARD DE-CONFIGURED\n========================="
         ;;
     *)
@@ -174,5 +196,7 @@ case "$1" in
         ;;
 esac
 
+# to ensure it is the actual IP address of the current device
+PUBLIC_IP=$(curl -sS icanhazip.com)
 curl -sS http://ip-api.com/json/$PUBLIC_IP | jq .
 cd $cwd
