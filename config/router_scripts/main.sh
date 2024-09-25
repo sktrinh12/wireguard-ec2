@@ -146,6 +146,4 @@ echo -e "=========================\nPUBLIC IP AND SERVER KEY\n==================
 echo "Public IP: $PUBLIC_IP"
 echo "Server Public Key: $SERVER_PUBLIC_KEY"
 
-echo "$ALLOWED_IPS $CLIENT_PRIVATE_KEY $REGION $IP_ADDRESS $PEER_PORT $PEER_NAME"
-
 ./router_config.sh "$ALLOWED_IPS" "$CLIENT_PRIVATE_KEY" "$SERVER_PUBLIC_KEY" "$REGION" "$IP_ADDRESS" "$PEER_PORT" "$PEER_NAME" "$PUBLIC_IP"
