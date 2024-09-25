@@ -74,4 +74,7 @@ wg show
 wg showconf vpn
 ip address show
 ip route show table all
+logread -e cron
 ```
+
+To check logs on remote executor EC2 instance, `/var/log/cloud-init-output.log` within AWS Console. Since there won't be ssh access to this ephemeral executor.
