@@ -1,7 +1,6 @@
 #!/bin/sh
 
-FILE_NAME=$(basename "$0")
-echo -e "\n====================XX ${FILE_NAME} started at $(date) XX====================\n" >> "/mnt/logs/${FILE_NAME}.log"
+echo -e "\n====================XX $(basename "$0") started at $(date) XX====================\n"
 
 TERRAFORM_CMD="apply"
 CLIENT_PRIVATE_KEY=$(wg genkey)
@@ -104,7 +103,7 @@ echo "======================================="
 #   --aws-sigv4 "aws:amz:${REGION}:ec2" | xmllint --xpath "string(//*[local-name()='ipAddress'])" -
 # )
 
-"$PROJ_DIR/iam_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+"$PROJ_DIR/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
 
 PUBLIC_IP=$(
 curl -s \

@@ -1,7 +1,6 @@
 #!/bin/sh
 
-FILE_NAME=$(basename "$0")
-echo -e "\n====================XX ${FILE_NAME} started at $(date) XX====================" >> "/mnt/logs/${FILE_NAME}.log"
+echo -e "\n====================XX $(basename "$0") started at $(date) XX====================\n"
 
 STATUS="Not Ready"
 TERRAFORM_CMD="destroy"
@@ -107,7 +106,7 @@ uci -q delete network.wgserver
 uci commit network
 service network restart
 
-"${PROJ_DIR}/iam_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+"${PROJ_DIR}/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
 
 echo -e "\n==========================================="
 echo "  Destruction Complete! - $(date)"
