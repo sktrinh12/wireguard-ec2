@@ -1,21 +1,17 @@
 #!/bin/sh
 
-source ./user_data.sh
-
 AMI_ID="$1"
 CLIENT_PUBLIC_KEY="$2"
-NAME="$3"
-GIT_REPO="$4"
-INSTANCE_PROFILE_NAME="$5"
-INSTANCE_TYPE="$6"
-REGION="$7"
-AWS_ACCESS_KEY="$8"
-AWS_SECRET_KEY="$9"
-BUCKET_NAME="${10}"
-BUCKET_REGION="${11}"
-KEY_PREFIX="${12}"
-USER_DATA="${13}"
+INSTANCE_PROFILE_NAME="$3"
+INSTANCE_TYPE="$4"
+REGION="$5"
+AWS_ACCESS_KEY="$6"
+AWS_SECRET_KEY="$7"
+USER_DATA_IN="$8"
+PROJ_DIR="$9"
 STATUS="Not Ready"
+
+source "$PROJ_DIR/user_data.sh"
 
 USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
     -v status_name="WG_EC2_STATUS" \
@@ -35,9 +31,12 @@ USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
 }')
 
 eval "$USER_DATA_APPEND_SSM"
-echo -e "\r=============================="
+echo -e "\n=============================="
 echo "   Deploying EC2 Instance     "
 echo "=============================="
+
+echo "${USER_DATA_IN}"
+USER_DATA_BASE64=$(echo "$USER_DATA_IN" | base64)
 
 curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:ec2" \
@@ -53,4 +52,4 @@ curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
 --data-urlencode "TagSpecification.1.ResourceType=instance" \
 --data-urlencode "TagSpecification.1.Tag.1.Key=Name" \
 --data-urlencode "TagSpecification.1.Tag.1.Value=TfExecutor" \
---data-urlencode "UserData=${USER_DATA}" | xmllint --xpath "string(//*[local-name()='instanceId'])" - > instance_id
+--data-urlencode "UserData=${USER_DATA_BASE64}" | xmllint --xpath "string(//*[local-name()='instanceId'])" - > "${PROJ_DIR}/instance_id"
