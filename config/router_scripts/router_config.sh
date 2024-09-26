@@ -43,4 +43,4 @@ uci commit network
 service network restart
 
 PUBLIC_IP=$(curl -s icanhazip.com)
-curl -s https://ip-api.com/json/$PUBLIC_IP
+curl -s http://ip-api.com/json/$PUBLIC_IP
