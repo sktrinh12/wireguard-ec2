@@ -1,24 +1,15 @@
 #!/bin/sh
 
-GPG_PASSPHRASE=$(gpg --batch --yes --decrypt /mnt/creds/input.gpg)
-eval $(gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --decrypt /mnt/creds/aws.gpg)
+FILE_NAME=$(basename "$0")
+echo -e "\n====================XX ${FILE_NAME} started at $(date) XX====================" >> "/mnt/logs/${FILE_NAME}.log"
 
-source ./user_data.sh
-
-AMI_ID="ami-0e86e20dae9224db8"
-NAME="wireguard-ec2"
-GIT_REPO="https://github.com/sktrinh12/${NAME}.git"
-INSTANCE_PROFILE_NAME="tf-exec-instance-profile"
-INSTANCE_TYPE="t2.micro"
-REGION="us-east-1"
-ROLE_NAME="tf-exec-role"
-POLICY_NAME="tf-exec-policy"
-PEER_NAME="vpn"
-BUCKET_NAME="tf-ec2-state"
-BUCKET_REGION="us-east-2"
-KEY_PREFIX="wireguard" 
 STATUS="Not Ready"
 TERRAFORM_CMD="destroy"
+PROJ_DIR=$(dirname "$0")
+
+source "${PROJ_DIR}/variables.sh"
+source "${PROJ_DIR}/user_data.sh"
+
 USER_DATA_DOWN=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
     -v git="$GIT_REPO" \
     -v nm="$NAME" \
@@ -43,6 +34,7 @@ USER_DATA_DOWN=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
     print;
 }')
 
+# append to USER_DATA_DOWN
 USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
     -v status="OK" \
     -v status_name="WG_EC2_STATUS" \
@@ -60,7 +52,6 @@ USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
     print;
 }')
 
-echo "\r"
 USER_DATA_DOWN=$(cat << EOF
 ${USER_DATA_DOWN}
 
@@ -69,8 +60,8 @@ EOF
 )
 
 # echo $USER_DATA_DOWN
-USER_DATA_BASE64=$(echo "$USER_DATA_DOWN" | base64)
 
+# re-use var to send curl command now
 USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
     -v status_name="WG_EC2_STATUS" \
     -v status="Not Ready" \
@@ -91,21 +82,20 @@ USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
 eval "$USER_DATA_APPEND_SSM"
 unset USER_DATA_APPEND_SSM
 
-./iam_config.sh "$ROLE_NAME" "$REGION" "$POLICY_NAME" "$INSTANCE_PROFILE_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME"
+"${PROJ_DIR}/iam_config.sh" "$ROLE_NAME" "$REGION" "$POLICY_NAME" "$INSTANCE_PROFILE_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME"
 
-echo "==============================="
+echo -e "\n==============================="
 echo "  Waiting for IAM propogation  "
 echo "==============================="
-sleep 5
+sleep 4
 
-./ec2_setup.sh "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$NAME" "$GIT_REPO" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME" "$BUCKET_REGION" "$KEY_PREFIX" "$USER_DATA_BASE64"
+"${PROJ_DIR}/ec2_setup.sh" "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$USER_DATA_DOWN" "$PROJ_DIR"
 
-INSTANCE_ID=$(cat instance_id)
-echo "======================================="
+INSTANCE_ID=$(cat "${PROJ_DIR}/instance_id")
+echo -e "\n======================================="
 echo "   INSTANCE ID: $INSTANCE_ID"
 echo "======================================="
-echo -e "\r"
-echo "======================================"
+echo -e "\n======================================"
 echo "  Waiting for Terraform Destroy       "
 echo "======================================"
 
@@ -117,4 +107,8 @@ uci -q delete network.wgserver
 uci commit network
 service network restart
 
-./iam_delete.sh "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$BUCKET_NAME" "$KEY_PREFIX" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+"${PROJ_DIR}/iam_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+
+echo -e "\n==========================================="
+echo "  Destruction Complete! - $(date)"
+echo "==========================================="
