@@ -1,28 +1,16 @@
 #!/bin/sh
 
-GPG_PASSPHRASE=$(gpg --batch --yes --decrypt /mnt/creds/input.gpg)
-eval $(gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --decrypt /mnt/creds/aws.gpg) 
+FILE_NAME=$(basename "$0")
+echo -e "\n====================XX ${FILE_NAME} started at $(date) XX====================\n" >> "/mnt/logs/${FILE_NAME}.log"
 
-source ./user_data.sh
-
-ALLOWED_IPS="0.0.0.0/0"
-AMI_ID="ami-0e86e20dae9224db8"
+TERRAFORM_CMD="apply"
 CLIENT_PRIVATE_KEY=$(wg genkey)
 CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
-REGION="us-east-1"
-NAME="wireguard-ec2"
-GIT_REPO="https://github.com/sktrinh12/${NAME}.git"
-INSTANCE_PROFILE_NAME="tf-exec-instance-profile"
-INSTANCE_TYPE="t2.micro"
-IP_ADDRESS="10.0.0.2/24"
-PEER_PORT=51820
-POLICY_NAME="tf-exec-policy"
-PEER_NAME="vpn"
-ROLE_NAME="tf-exec-role"
-BUCKET_NAME="tf-ec2-state"
-BUCKET_REGION="us-east-2"
-KEY_PREFIX="wireguard"
-TERRAFORM_CMD="apply"
+PROJ_DIR=$(dirname "$0")
+
+source "${PROJ_DIR}/variables.sh"
+source "${PROJ_DIR}/user_data.sh"
+
 USER_DATA_UP=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
     -v git="$GIT_REPO" \
     -v nm="$NAME" \
@@ -76,7 +64,6 @@ USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
     gsub("{{REGION}}", region);
     print;
 }')
-
 USER_DATA_UP=$(cat << EOF
 ${USER_DATA_UP}
 
@@ -89,25 +76,22 @@ EOF
 unset USER_DATA_APPEND_SSM
 unset USER_DATA_APPEND_IP
 # echo "$USER_DATA_UP"
-# echo 'press button'
-# read -r
 
-USER_DATA_BASE64=$(echo "$USER_DATA_UP" | base64)
-./iam_config.sh "$ROLE_NAME" "$REGION" "$POLICY_NAME" "$INSTANCE_PROFILE_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME"
+"$PROJ_DIR/iam_config.sh" "$ROLE_NAME" "$REGION" "$POLICY_NAME" "$INSTANCE_PROFILE_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME"
 
-echo "==============================="
+echo -e "\n==============================="
 echo "  Waiting for IAM propogation  "
 echo "==============================="
-sleep 5
+sleep 4
 
-./ec2_setup.sh "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$NAME" "$GIT_REPO" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME" "$BUCKET_REGION" "$KEY_PREFIX" "$USER_DATA_BASE64"
+"$PROJ_DIR/ec2_setup.sh" "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$USER_DATA_UP" "$PROJ_DIR"
  
-echo "======================================"
+echo -e "\n======================================"
 echo "  Waiting for Terraform installation  "
 echo "======================================"
 
-INSTANCE_ID=$(cat instance_id)
-echo "======================================="
+INSTANCE_ID=$(cat "${PROJ_DIR}/instance_id")
+echo -e "\n======================================="
 echo "   INSTANCE ID: $INSTANCE_ID"
 echo "======================================="
 
@@ -120,7 +104,7 @@ echo "======================================="
 #   --aws-sigv4 "aws:amz:${REGION}:ec2" | xmllint --xpath "string(//*[local-name()='ipAddress'])" -
 # )
 
-./iam_delete.sh "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$BUCKET_NAME" "$KEY_PREFIX" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+"$PROJ_DIR/iam_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
 
 PUBLIC_IP=$(
 curl -s \
@@ -142,8 +126,12 @@ curl -s \
   "https://ssm.${REGION}.amazonaws.com/" | jq -r '.Parameter.Value'
 )
 
-echo -e "=========================\nPUBLIC IP AND SERVER KEY\n========================="
+echo -e "\n=========================\nPUBLIC IP AND SERVER KEY\n========================="
 echo "Public IP: $PUBLIC_IP"
 echo "Server Public Key: $SERVER_PUBLIC_KEY"
 
-./router_config.sh "$ALLOWED_IPS" "$CLIENT_PRIVATE_KEY" "$SERVER_PUBLIC_KEY" "$REGION" "$IP_ADDRESS" "$PEER_PORT" "$PEER_NAME" "$PUBLIC_IP"
+"$PROJ_DIR/router_config.sh" "$ALLOWED_IPS" "$CLIENT_PRIVATE_KEY" "$SERVER_PUBLIC_KEY" "$REGION" "$IP_ADDRESS" "$PEER_PORT" "$PEER_NAME" "$PUBLIC_IP"
+
+echo -e "\n====================================="
+echo "  Creation Complete! - $(date)"
+echo "====================================="
