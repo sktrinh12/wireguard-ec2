@@ -105,6 +105,8 @@ echo "======================================="
 
 "$PROJ_DIR/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
 
+echo "Getting PUBLIC_IP & SERVER_PUBLIC_KEY"
+
 PUBLIC_IP=$(
 curl -s \
   --aws-sigv4 "aws:amz" \
