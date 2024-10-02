@@ -78,3 +78,17 @@ logread -e cron
 ```
 
 To check logs on remote executor EC2 instance, `/var/log/cloud-init-output.log` within AWS Console. Since there won't be ssh access to this ephemeral executor.
+
+### Password protect
+
+```
+# this will go thru prompt which you can create a user id
+gpg --gen-key
+# show available keys
+gpg --list-keys
+gpg -e -r "${USER_ID}" password.txt
+# to decrypt and show it works
+gpg -d password.txt.gpg
+# in order to decrypt within script
+gpg --batch --yes --passphrase "${PASSPHRASE}" -d password.txt
+```
