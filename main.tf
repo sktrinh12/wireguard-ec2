@@ -74,8 +74,8 @@ resource "aws_iam_role" "ec2_role" {
   })
 }
 
-resource "aws_iam_policy" "secrets_access_policy" {
-  name = "secrets_access_policy_${var.name}"
+resource "aws_iam_policy" "access_policy" {
+  name = "access_policy_${var.name}"
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -94,7 +94,7 @@ resource "aws_iam_policy" "secrets_access_policy" {
 
 resource "aws_iam_role_policy_attachment" "ec2_role_policy_attach" {
 role       = aws_iam_role.ec2_role.name
-policy_arn = aws_iam_policy.secrets_access_policy.arn
+policy_arn = aws_iam_policy.access_policy.arn
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
