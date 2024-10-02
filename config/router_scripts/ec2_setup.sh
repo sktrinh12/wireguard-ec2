@@ -35,7 +35,7 @@ echo -e "\n=============================="
 echo "   Deploying EC2 Instance     "
 echo "=============================="
 
-echo "${USER_DATA_IN}"
+# echo "${USER_DATA_IN}"
 USER_DATA_BASE64=$(echo "$USER_DATA_IN" | base64)
 
 curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
