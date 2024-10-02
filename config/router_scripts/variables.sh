@@ -16,4 +16,11 @@ BUCKET_NAME="tf-ec2-state"
 BUCKET_REGION="us-east-2"
 KEY_PREFIX="wireguard"
 GPG_PASSPHRASE=$(gpg --batch --yes --decrypt /mnt/creds/input.gpg)
-eval $(gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --decrypt /mnt/creds/aws.gpg) 
+
+if [ "$1" == "1" ]; then
+    GPG_FILE="/mnt/creds/aws_chom.gpg"
+else
+    GPG_FILE="/mnt/creds/aws.gpg"
+fi
+
+eval $(gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --decrypt $GPG_FILE)
