@@ -6,7 +6,7 @@ STATUS="Not Ready"
 TERRAFORM_CMD="destroy"
 PROJ_DIR=$(dirname "$0")
 
-source "${PROJ_DIR}/variables.sh"
+source "${PROJ_DIR}/variables.sh" "$1"
 source "${PROJ_DIR}/user_data.sh"
 
 USER_DATA_DOWN=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
