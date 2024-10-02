@@ -38,7 +38,7 @@ echo "=============================="
 # echo "${USER_DATA_IN}"
 USER_DATA_BASE64=$(echo "$USER_DATA_IN" | base64)
 
-curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
+CURL_OUTPUT=$(curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:ec2" \
 --user "${AWS_ACCESS_KEY}:${AWS_SECRET_KEY}" \
 --header 'Content-Type: application/x-www-form-urlencoded,' \
@@ -49,7 +49,22 @@ curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
 --data-urlencode "IamInstanceProfile.Name=${INSTANCE_PROFILE_NAME}" \
 --data-urlencode "Version=2016-11-15" \
 --data-urlencode "InstanceType=${INSTANCE_TYPE}" \
+--data-urlencode "KeyName=aws-ec2" \
 --data-urlencode "TagSpecification.1.ResourceType=instance" \
 --data-urlencode "TagSpecification.1.Tag.1.Key=Name" \
 --data-urlencode "TagSpecification.1.Tag.1.Value=TfExecutor" \
---data-urlencode "UserData=${USER_DATA_BASE64}" | xmllint --xpath "string(//*[local-name()='instanceId'])" - > "${PROJ_DIR}/instance_id"
+--data-urlencode "UserData=${USER_DATA_BASE64}")
+
+echo -e "\n============================================="
+echo $CURL_OUTPUT
+echo -e "\n=============================================\n"
+
+# Validate the CURL output is valid XML
+echo "$CURL_OUTPUT" | xmllint --noout -
+
+if [ $? -ne 0 ]; then
+    echo "Error: Invalid XML output."
+    exit 1
+fi
+
+echo $CURL_OUTPUT | xmllint --xpath "string(//*[local-name()='instanceId'])" - > "${PROJ_DIR}/instance_id"
