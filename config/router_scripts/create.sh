@@ -7,7 +7,7 @@ CLIENT_PRIVATE_KEY=$(wg genkey)
 CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 PROJ_DIR=$(dirname "$0")
 
-source "${PROJ_DIR}/variables.sh"
+source "${PROJ_DIR}/variables.sh" "$1"
 source "${PROJ_DIR}/user_data.sh"
 
 USER_DATA_UP=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
