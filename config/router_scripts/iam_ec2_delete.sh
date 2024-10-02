@@ -19,7 +19,7 @@ TF_EXEC_STATUS=$(curl -s \
   "https://ssm.${REGION}.amazonaws.com/" | jq -r '.Parameter.Value'
 )
 if [[ "$TF_EXEC_STATUS" == "OK" ]]; then
-   echo "TF_EXEC server has completed tasks. Terminating TfExecutor"
+   echo "TF_EXEC server has completed tasks. Terminating..."
    break
  else
    echo "Status: $TF_EXEC_STATUS. Checking again in ${WAIT}s..."
