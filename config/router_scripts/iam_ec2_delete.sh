@@ -7,7 +7,7 @@ POLICY_NAME="$4"
 AWS_ACCESS_KEY="$5"
 AWS_SECRET_KEY="$6"
 INSTANCE_ID="$7"
-WAIT=20
+WAIT=22
 
 while true; do
 TF_EXEC_STATUS=$(curl -s \
