@@ -57,7 +57,7 @@ CURL_OUTPUT=$(curl -s -vvv "https://ec2.${REGION}.amazonaws.com/" \
 
 echo -e "\n============================================="
 echo $CURL_OUTPUT
-echo -e "\n=============================================\n"
+echo -e "\n============================================="
 
 # Validate the CURL output is valid XML
 echo "$CURL_OUTPUT" | xmllint --noout -
