@@ -60,7 +60,7 @@ resource "aws_instance" "wireguard" {
 }
 
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2_secrets_role_${var.name}"
+  name = "ec2_role_${var.name}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
