@@ -8,6 +8,11 @@ AWS_ACCESS_KEY="$5"
 AWS_SECRET_KEY="$6"
 INSTANCE_ID="$7"
 WAIT=22
+PRE_WAIT=90
+
+echo -e "\n=================DELETING RESOURCES===================\n"
+echo "Sleeping... $PRE_WAIT"
+sleep $PRE_WAIT
 
 while true; do
 TF_EXEC_STATUS=$(curl -s \
@@ -18,6 +23,7 @@ TF_EXEC_STATUS=$(curl -s \
   -d '{"Name":"WG_EC2_STATUS"}' \
   "https://ssm.${REGION}.amazonaws.com/" | jq -r '.Parameter.Value'
 )
+
 if [[ "$TF_EXEC_STATUS" == "OK" ]]; then
    echo "TF_EXEC server has completed tasks. Terminating..."
    break
@@ -28,8 +34,9 @@ sleep $WAIT
 done
 
 echo -e "\n============================="
-echo "   Terminate EC2 Instance    "
+echo "   Terminate EC2 Instance"
 echo "============================="
+
 curl --request POST \
 "https://ec2.${REGION}.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:ec2" \
@@ -43,6 +50,7 @@ echo "=============================="
 echo "   Remove Role from Instance   "
 echo "         Profile               "
 echo "=============================="
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
