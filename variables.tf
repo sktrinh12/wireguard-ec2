@@ -27,8 +27,3 @@ variable "instance_type" {
   description = "The instance type for the wireguard server"
   default     = "t2.micro"
 }
-
-variable "profile" {
-  description = "The AWS profile to use"
-  default     = "default"
-}
