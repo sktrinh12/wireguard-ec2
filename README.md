@@ -26,40 +26,15 @@ wvpn() {
 }
 ```
 
-In order for `main.sh` to work without interaction, you will probably need to add these two entries in sudodoers list (`sudo visudo`) in order to run sudo without password prompt. However, this is for current device configuration, not for router configuration:
-```
-user ALL=(ALL) NOPASSWD: /bin/cp * /etc/wireguard/wg0.conf
-user ALL=(ALL) NOPASSWD: /usr/bin/wg-quick *
-```
-
 ### Router setup using `OpenWRT`
 
 Update to newest firmware by download the `.bin` file from [openwrt downloads](https://downloads.openwrt.org/releases/23.05.4/targets/ramips/mt76x8/). For example, `glinet_gl-mt300n-v2-squashfs-sysupgrade.bin`. Check the sha256sum to ensure the file is valid. 
-
-Deleted section in `/etc/config/wireless`:
-
-```
-config wifi-device 'mt7628'
-        option type 'mtk'
-        option band '2g'
-        option htmode 'HT40'
-        option channel 'auto'
-        option txpower '100'
-        option country 'US'
-        option disabled '0'
-        option legacy_rates '0'
-```
-due to error: `mt7628(mtk): Interface type not supported
-'radio0' is disabled`
-
-In addition set to 0: `uci set wireless.radio0.disabled=0`. And then, `uci commit wireless` and `service network restart`
-
 
 In order to have password-less ssh access to the gl.inet device (MT300N-V2); generated ssh keys:
 
 ```
 ssh-keygen -t rsa -b 4096
-ssh-copy-id -i ~/.ssh/glinet_mt300.pub root@192.168.8.1
+ssh-copy-id -i ~/.ssh/glinet_mt300.pub root@${IP_ADDR_DEVICE}
 ```
 
 When prompted name the file accordingly, in this case `glinet_mt300` Then copy the public key to the glinet device using the `ssh-copy-id` command.
@@ -92,3 +67,7 @@ gpg -d password.txt.gpg
 # in order to decrypt within script
 gpg --batch --yes --passphrase "${PASSPHRASE}" -d password.txt
 ```
+
+### Notes
+
+If you want to clean up resources without using the bash scripts from `/router_scripts` directory, you can use the awscli commands that are written in the `/device_scripts` directory.
