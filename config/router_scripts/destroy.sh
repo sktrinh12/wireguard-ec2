@@ -93,7 +93,6 @@ sleep 4
 INSTANCE_ID=$(cat "${PROJ_DIR}/instance_id")
 echo -e "\n======================================="
 echo "   INSTANCE ID: $INSTANCE_ID"
-echo "======================================="
 echo -e "\n======================================"
 echo "  Waiting for Terraform Destroy       "
 echo "======================================"
