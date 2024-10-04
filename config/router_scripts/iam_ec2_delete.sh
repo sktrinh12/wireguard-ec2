@@ -11,7 +11,7 @@ WAIT=22
 PRE_WAIT=90
 
 echo -e "\n=================DELETING RESOURCES===================\n"
-echo "Sleeping... $PRE_WAIT"
+echo "Waiting $PRE_WAIT..."
 sleep $PRE_WAIT
 
 while true; do
