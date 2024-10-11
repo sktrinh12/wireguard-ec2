@@ -81,7 +81,7 @@ unset USER_DATA_APPEND_IP
 echo -e "\n==============================="
 echo "  Waiting for IAM propogation  "
 echo "==============================="
-sleep 4
+sleep 8
 
 "$PROJ_DIR/ec2_setup.sh" "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$USER_DATA_UP" "$PROJ_DIR"
  
