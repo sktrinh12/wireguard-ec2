@@ -38,6 +38,7 @@ curl --request POST \
 --data-urlencode "Version=2010-05-08"
 
 echo "creating policy"
+sleep 1
 
 ROLE_POLICY=$(cat <<EOF
 {
@@ -103,6 +104,9 @@ EOF
 echo "=============================="
 echo "      Adding Role Policy      "
 echo "=============================="
+
+sleep 1
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
@@ -117,6 +121,9 @@ curl --request POST \
 echo "================================"
 echo "   Creating instance profile    "
 echo "================================"
+
+sleep 1
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
@@ -129,6 +136,9 @@ curl --request POST \
 echo "============================================"
 echo "     Attaching role to instance profile     "
 echo "============================================"
+
+sleep 1
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
