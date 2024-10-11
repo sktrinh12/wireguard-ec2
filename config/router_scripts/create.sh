@@ -76,12 +76,15 @@ unset USER_DATA_APPEND_SSM
 unset USER_DATA_APPEND_IP
 # echo "$USER_DATA_UP"
 
+# delete iam configs
+"$PROJ_DIR/iam_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY"
+
 "$PROJ_DIR/iam_config.sh" "$ROLE_NAME" "$REGION" "$POLICY_NAME" "$INSTANCE_PROFILE_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$BUCKET_NAME"
 
 echo -e "\n==============================="
 echo "  Waiting for IAM propogation  "
 echo "==============================="
-sleep 8
+sleep 7
 
 "$PROJ_DIR/ec2_setup.sh" "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$USER_DATA_UP" "$PROJ_DIR"
  
@@ -103,7 +106,7 @@ echo "======================================="
 #   --aws-sigv4 "aws:amz:${REGION}:ec2" | xmllint --xpath "string(//*[local-name()='ipAddress'])" -
 # )
 
-"$PROJ_DIR/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+"$PROJ_DIR/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID" "$PROJ_DIR"
 
 echo "Getting PUBLIC_IP & SERVER_PUBLIC_KEY"
 
