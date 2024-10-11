@@ -8,10 +8,9 @@ AWS_ACCESS_KEY="$5"
 AWS_SECRET_KEY="$6"
 INSTANCE_ID="$7"
 WAIT=22
-PRE_WAIT=90
+PRE_WAIT=105
 
-echo -e "\n=================DELETING RESOURCES===================\n"
-echo "Waiting $PRE_WAIT..."
+echo "Waiting ${PRE_WAIT}s..."
 sleep $PRE_WAIT
 
 while true; do
@@ -51,6 +50,7 @@ echo "   Remove Role from Instance   "
 echo "         Profile               "
 echo "=============================="
 
+sleep 1
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
@@ -64,6 +64,9 @@ curl --request POST \
 echo "=============================="
 echo "     Delete Instance Profile   "
 echo "=============================="
+
+sleep 1
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
@@ -76,6 +79,9 @@ curl --request POST \
 echo "=============================="
 echo "      Delete Role Policy       "
 echo "=============================="
+
+sleep 1
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
@@ -89,6 +95,9 @@ curl --request POST \
 echo "=============================="
 echo "          Delete Role          "
 echo "=============================="
+
+sleep 1
+
 curl --request POST \
 "https://iam.amazonaws.com/" \
 --aws-sigv4 "aws:amz:${REGION}:iam" \
