@@ -13,14 +13,15 @@ POLICY_NAME="tf-exec-policy"
 PEER_NAME="vpn"
 ROLE_NAME="tf-exec-role"
 KEY_PREFIX="wireguard"
-GPG_PASSPHRASE=$(gpg --batch --yes --decrypt /mnt/creds/input.gpg)
+CREDS_PATH="/mnt/creds"
+GPG_PASSPHRASE=$(gpg --batch --yes --decrypt "${CREDS_PATH}/input.gpg")
 
 if [ "$1" == "1" ]; then
-    GPG_FILE="/mnt/creds/aws_chom.gpg"
+    GPG_FILE="${CREDS_PATH}/aws_chom.gpg"
     BUCKET_NAME="tf-ec2-state-chom"
     BUCKET_REGION="us-east-1"
 else
-    GPG_FILE="/mnt/creds/aws.gpg"
+    GPG_FILE="${CREDS_PATH}/aws.gpg"
     BUCKET_NAME="tf-ec2-state"
     BUCKET_REGION="us-east-2"
 fi
