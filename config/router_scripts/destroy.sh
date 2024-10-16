@@ -105,7 +105,7 @@ uci -q delete network.wgserver
 uci commit network
 service network restart
 
-"${PROJ_DIR}/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID"
+"${PROJ_DIR}/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID" "$PROJ_DIR"
 
 echo -e "\n==========================================="
 echo "  Destruction Complete! - $(date)"
