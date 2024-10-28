@@ -1,11 +1,16 @@
 #!/bin/sh
 
-echo -e "\n====================XX $(basename "$0") started at $(date) XX====================\n"
-
 TERRAFORM_CMD="apply"
 CLIENT_PRIVATE_KEY=$(wg genkey)
 CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 PROJ_DIR=$(dirname "$0")
+
+if [ -f "$PROJ_DIR/norun.lock" ]; then
+    echo "Lock file exists. $0 Exiting..."
+    exit 0
+fi
+
+echo -e "\n====================XX $(basename "$0") started at $(date) XX====================\n"
 
 source "${PROJ_DIR}/variables.sh" "$1"
 source "${PROJ_DIR}/user_data.sh"
