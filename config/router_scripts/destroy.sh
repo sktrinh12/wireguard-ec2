@@ -1,10 +1,15 @@
 #!/bin/sh
 
-echo -e "\n====================XX $(basename "$0") started at $(date) XX====================\n"
-
 STATUS="Not Ready"
 TERRAFORM_CMD="destroy"
 PROJ_DIR=$(dirname "$0")
+
+if [ -f "$PROJ_DIR/norun.lock" ]; then
+    echo "Lock file exists. $0 Exiting..."
+    exit 0
+fi
+
+echo -e "\n====================XX $(basename "$0") started at $(date) XX====================\n"
 
 source "${PROJ_DIR}/variables.sh" "$1"
 source "${PROJ_DIR}/user_data.sh"
@@ -110,3 +115,10 @@ service network restart
 echo -e "\n==========================================="
 echo "  Destruction Complete! - $(date)"
 echo "==========================================="
+
+if [ "$2" -eq 1 ]; then
+    echo "Powering off the device..."
+    poweroff
+else
+    echo "The device will stay on"
+fi
