@@ -66,6 +66,8 @@ ROLE_POLICY=$(cat <<EOF
         "ec2:DeleteKeyPair",
         "ec2:DescribeNetworkInterfaces",
         "ec2:CreateTags",
+        "ec2:AssociateAddress",
+        "ec2:DescribeAddresses",
         "iam:CreateRole",
         "iam:GetRole",
         "iam:GetPolicy",
