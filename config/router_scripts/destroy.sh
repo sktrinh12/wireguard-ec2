@@ -5,9 +5,7 @@ TERRAFORM_CMD="destroy"
 PROJ_DIR=$(dirname "$0")
 
 if [ -f "$PROJ_DIR/norun.lock" ]; then
-    echo "Lock file exists. $0 - Exiting..."
-    rm "$PROJ_DIR/norun.lock"
-    echo "Lock file removed"
+    echo "Lock file exists. $0 - Exiting..." 
     exit 0
 fi
 
@@ -118,7 +116,7 @@ echo -e "\n==========================================="
 echo "  Destruction Complete! - $(date)"
 echo "==========================================="
 
-if [ "$2" -eq 1 ]; then
+if [ "${2:-0}" -eq 1 ]; then
     echo "Powering off the device..."
     poweroff
 else
