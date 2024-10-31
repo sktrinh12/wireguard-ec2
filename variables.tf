@@ -27,3 +27,8 @@ variable "instance_type" {
   description = "The instance type for the wireguard server"
   default     = "t2.micro"
 }
+
+variable "eip_allocation_id" {
+  description = "The allocation ID of the Elastic IP"
+  type        = string
+}
