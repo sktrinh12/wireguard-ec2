@@ -88,7 +88,7 @@ resource "aws_iam_policy" "access_policy" {
         ]
         Resource = [
                 "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:elastic-ip/${var.eip_allocation_id}",
-                "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:elastic-ip/*"
+                "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:instance/*"
         ]
       },
       {
