@@ -5,7 +5,9 @@ TERRAFORM_CMD="destroy"
 PROJ_DIR=$(dirname "$0")
 
 if [ -f "$PROJ_DIR/norun.lock" ]; then
-    echo "Lock file exists. $0 Exiting..."
+    echo "Lock file exists. $0 - Exiting..."
+    rm "$PROJ_DIR/norun.lock"
+    echo "Lock file removed"
     exit 0
 fi
 
