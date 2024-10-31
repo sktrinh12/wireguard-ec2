@@ -81,6 +81,14 @@ resource "aws_iam_policy" "access_policy" {
     Version = "2012-10-17",
     Statement = [
       {
+        Effect   = "Allow"
+        Action   = [
+          "ec2:AssociateAddress",
+          "ec2:DescribeAddresses",
+        ]
+        Resource = "*"
+      },
+      {
         Action   = [
           "ssm:PutParameter",
           "ssm:PutParameters"
