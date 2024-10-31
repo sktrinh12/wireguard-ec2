@@ -125,3 +125,8 @@ resource "aws_security_group" "sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+resource "aws_eip_association" "eip_assoc" {
+  instance_id   = aws_instance.wireguard.id
+  allocation_id = var.eip_allocation_id
+}
