@@ -21,7 +21,7 @@ terraform {
 }
 EOT
 terraform init -upgrade -reconfigure
-terraform {{TERRAFORM_CMD}} -auto-approve -var="client_public_key={{CLIENT_PUBLIC_KEY}}"
+terraform {{TERRAFORM_CMD}} -auto-approve -var="client_public_key={{CLIENT_PUBLIC_KEY}}" -var="eip_allocation_id={{EIP_ALLOC_ID}}"
 EOF
 )
 
@@ -41,21 +41,21 @@ curl -s \
 EOF
 )
 
-USER_DATA_SSM_IP=$(cat << EOF
-sleep 4
-terraform refresh -var="client_public_key={{CLIENT_PUBLIC_KEY}}"
-echo "==============================="
-echo "  SSM set-parameter PUBLIC_IP  "
-echo "==============================="
-JSON_PAYLOAD=\$(jq -n --arg name "PUBLIC_IP" --arg value "\$(terraform output -raw public_ip)" --arg type "String" \
-'{Name: \$name, Value: \$value, Type: \$type, Overwrite: true}')
-
-curl -v -s \
-  --aws-sigv4 "aws:amz" \
-  --user "{{AWS_ACCESS_KEY}}:{{AWS_SECRET_KEY}}" \
-  -H "X-Amz-Target: AmazonSSM.PutParameter" \
-  -H "Content-Type: application/x-amz-json-1.1" \
-  -d "\$JSON_PAYLOAD" \
-  "https://ssm.{{REGION}}.amazonaws.com/"
-EOF
-)
+# USER_DATA_SSM_IP=$(cat << EOF
+# sleep 4
+# terraform refresh -var="client_public_key={{CLIENT_PUBLIC_KEY}}"
+# echo "==============================="
+# echo "  SSM set-parameter PUBLIC_IP  "
+# echo "==============================="
+# JSON_PAYLOAD=\$(jq -n --arg name "PUBLIC_IP" --arg value "\$(terraform output -raw public_ip)" --arg type "String" \
+# '{Name: \$name, Value: \$value, Type: \$type, Overwrite: true}')
+#
+# curl -v -s \
+#   --aws-sigv4 "aws:amz" \
+#   --user "{{AWS_ACCESS_KEY}}:{{AWS_SECRET_KEY}}" \
+#   -H "X-Amz-Target: AmazonSSM.PutParameter" \
+#   -H "Content-Type: application/x-amz-json-1.1" \
+#   -d "\$JSON_PAYLOAD" \
+#   "https://ssm.{{REGION}}.amazonaws.com/"
+# EOF
+# )
