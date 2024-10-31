@@ -123,7 +123,7 @@ echo "======================================="
 #   --aws-sigv4 "aws:amz:${REGION}:ec2" | xmllint --xpath "string(//*[local-name()='ipAddress'])" -
 # )
 
-# read -r
+#read -r
 
 "$PROJ_DIR/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID" "$PROJ_DIR"
 
