@@ -8,12 +8,12 @@ resource "aws_key_pair" "wg_key" {
   public_key = tls_private_key.private_key.public_key_openssh
 }
 
-resource "local_file" "ssh_private_key" {
-  filename = "${path.module}/${var.name}_key.pem"
-  content  = tls_private_key.private_key.private_key_pem
-  file_permission = "0600"
+resource "aws_s3_object" "ssh_private_key" {
+  bucket = var.bucket
+  key    = "wireguard/${var.name}_key.pem"
+  content = tls_private_key.private_key.private_key_pem
+  acl    = "private"
 }
-
 
 resource "aws_instance" "wireguard" {
   ami           = var.ami_id

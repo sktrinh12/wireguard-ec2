@@ -32,3 +32,9 @@ variable "eip_allocation_id" {
   description = "The allocation ID of the Elastic IP"
   type        = string
 }
+
+variable "bucket" {
+  description = "bucket name of s3"
+  type        = string
+  default     = "tf-ec2-state-chom"
+}
