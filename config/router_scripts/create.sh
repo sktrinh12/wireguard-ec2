@@ -7,6 +7,12 @@ CLIENT_PRIVATE_KEY=$(wg genkey)
 CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 PROJ_DIR=$(dirname "$0")
 CURL_TIMEOUT=10
+if [ -f ".conf" ]; then
+    source .conf
+else
+    echo "Configuration file, .conf not found!"
+    exit 1
+fi
 
 if [ -f "$PROJ_DIR/norun.lock" ]; then
     echo "Lock file exists. $0 Exiting..."
@@ -18,25 +24,25 @@ echo -e "\n====================XX $(basename "$0") started at $(date) XX========
 source "${PROJ_DIR}/variables.sh" "$1"
 source "${PROJ_DIR}/user_data.sh"
 
-EIP_OUTPUT=$(curl -s -v "https://ec2.${REGION}.amazonaws.com/" \
---aws-sigv4 "aws:amz:${REGION}:ec2" \
---user "${AWS_ACCESS_KEY}:${AWS_SECRET_KEY}" \
---header 'Content-Type: application/x-www-form-urlencoded' \
---data-urlencode "Action=DescribeAddresses" \
---data-urlencode "Version=2016-11-15" \
---max-time $CURL_TIMEOUT
-)
+# EIP_OUTPUT=$(curl -s -v "https://ec2.${REGION}.amazonaws.com/" \
+#--aws-sigv4 "aws:amz:${REGION}:ec2" \
+#--user "${AWS_ACCESS_KEY}:${AWS_SECRET_KEY}" \
+#--header 'Content-Type: application/x-www-form-urlencoded' \
+#--data-urlencode "Action=DescribeAddresses" \
+#--data-urlencode "Version=2016-11-15" \
+#--max-time $CURL_TIMEOUT
+#)
 
-if [ $? -ne 0 ]; then
-  echo "Failed to retrieve EIP information."
-  exit 1
-fi
+#if [ $? -ne 0 ]; then
+#  echo "Failed to retrieve EIP information."
+#  exit 1
+#fi
 
 #echo $EIP_OUTPUT
 
-EIP_ALLOC_ID=$(echo "$EIP_OUTPUT" | xmllint --xpath "string(//*[local-name()='addressesSet']/*[local-name()='item']/*[local-name()='allocationId'])" -)
+#EIP_ALLOC_ID=$(echo "$EIP_OUTPUT" | xmllint --xpath "string(//*[local-name()='addressesSet']/*[local-name()='item']/*[local-name()='allocationId'])" -)
 
-echo -e "\nEIP ALLOCATION ID: $EIP_ALLOC_ID\n"
+#echo -e "\nEIP ALLOCATION ID: $EIP_ALLOC_ID\n"
 
 USER_DATA_UP=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
     -v git="$GIT_REPO" \
@@ -125,13 +131,11 @@ echo "======================================="
 
 #read -r
 
-"$PROJ_DIR/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID" "$PROJ_DIR"
+"${PROJ_DIR}/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID" "$PROJ_DIR"
 
 echo "Getting PUBLIC_IP & SERVER_PUBLIC_KEY"
 
-PUBLIC_IP=$(
-  echo "$EIP_OUTPUT" | xmllint --xpath "string(//*[local-name()='addressesSet']/*[local-name()='item']/*[local-name()='publicIp'])" -
-)
+#$(echo "$EIP_OUTPUT" | xmllint --xpath "string(//*[local-name()='addressesSet']/*[local-name()='item']/*[local-name()='publicIp'])" - )
 
 SERVER_PUBLIC_KEY=$(
 curl -s \
