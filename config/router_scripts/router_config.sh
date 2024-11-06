@@ -10,8 +10,8 @@ PEER_NAME="$7"
 PUBLIC_IP="$8"
 
 # configure router settings
-opkg update
-opkg install wireguard-tools
+# opkg update
+# opkg install wireguard-tools
 
 # Configure firewall
 uci rename firewall.@zone[0]="lan"
