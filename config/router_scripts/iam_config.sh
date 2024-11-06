@@ -68,6 +68,7 @@ ROLE_POLICY=$(cat <<EOF
         "ec2:CreateTags",
         "ec2:AssociateAddress",
         "ec2:DescribeAddresses",
+        "ec2:DisassociateAddress",
         "iam:CreateRole",
         "iam:GetRole",
         "iam:GetPolicy",
@@ -84,7 +85,7 @@ ROLE_POLICY=$(cat <<EOF
         "iam:ListInstanceProfilesForRole",
         "iam:PassRole",
         "iam:AddRoleToInstanceProfile",
-	"iam:RemoveRoleFromInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
         "iam:DeleteRole",
         "iam:DeletePolicy"
       ],
