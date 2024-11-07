@@ -7,8 +7,8 @@ CLIENT_PRIVATE_KEY=$(wg genkey)
 CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 PROJ_DIR=$(dirname "$0")
 CURL_TIMEOUT=10
-if [ -f ".conf" ]; then
-    source .conf
+if [ -f "${PROJ_DIR}/.conf" ]; then
+    source "${PROJ_DIR}/.conf"
 else
     echo "Configuration file, .conf not found!"
     exit 1
@@ -95,7 +95,7 @@ EOF
 )
 
 unset USER_DATA_APPEND_SSM
-unset USER_DATA_APPEND_IP
+#unset USER_DATA_APPEND_IP
 echo "$USER_DATA_UP"
 
 
