@@ -31,3 +31,5 @@ Thumbs.db
 *.pem
 
 backend.tf
+t.sh
+instance_id
