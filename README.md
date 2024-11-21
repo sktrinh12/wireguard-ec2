@@ -8,7 +8,8 @@ CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 
 Then pass to terraform argument that passes public key and elastic static IP:
 ```bash
-terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_alloc_id=${EIP_ALLOC_ID}"
+AWS_PROFILE={PROFILE_NAME} terraform init --reconfigure
+AWS_PROFILE={PROFILE_NAME} terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_alloc_id=${EIP_ALLOC_ID}"
 ```
 
 All of the steps are laid out in `main.sh` which can be wrapped in a `zsh` function, however it was written for a local machine.
