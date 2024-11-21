@@ -16,6 +16,7 @@ fi
 
 if [ -f "$PROJ_DIR/norun.lock" ]; then
     echo "Lock file exists. $0 Exiting..."
+    echo "initiated at $(date)"
     exit 0
 fi
 
