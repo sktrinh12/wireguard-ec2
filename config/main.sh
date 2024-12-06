@@ -5,21 +5,30 @@ set -e
 placeholder=""
 
 # Check for correct number of arguments
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-  echo "Usage: $0 {up|down} [0|1]"
+if [[ "$#" -lt 2 ]]; then
+  echo "Usage: $0 {up|down} [0|1] [opt: conf]"
   exit 1
 fi
 
-PUBLIC_IP=""
+PROFILE="default"
+PUBLIC_IP="34.193.198.229"
 SERVER_PUBLIC_KEY=""
 CLIENT_PUBLIC_KEY=""
 CLIENT_PRIVATE_KEY=""
-ROUTER_IP="192.168.1.1"
+ROUTER_IP="10.12.07.85"
 PEER_PORT=51820
 ALLOWED_IPS="0.0.0.0/0"
 IP_ADDRESS="10.0.0.2/24"
 USERNAME="root"
 PEER_NAME="vpn"
+EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
+DB_NAME="${PEER_NAME}.db"
+TABLE_NAME="keys"
+
+# set profile to chom for now
+if [ "$2" -eq 1 ]; then
+  PROFILE="chom"
+fi
 
 # Function to handle errors and exit
 handle_error() {
@@ -35,6 +44,14 @@ echo "Changing directory to terraform project..."
 cd $HOME/Documents/scripts/terraform/wireguard-ec2
 
 up_vpn() { 
+  sqlite3 $DB_NAME <<EOF
+  CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_private_key TEXT NOT NULL,
+      client_public_key TEXT NOT NULL
+  );
+EOF
+
   # generate client keys
   echo "Generating client keys..."
   CLIENT_PRIVATE_KEY=$(wg genkey)
@@ -44,17 +61,26 @@ up_vpn() {
   echo "Client Private Key: $CLIENT_PRIVATE_KEY"
   echo "Client Public Key: $CLIENT_PUBLIC_KEY"
 
+  sqlite3 $DB_NAME <<EOF
+DELETE FROM $TABLE_NAME;
+INSERT INTO $TABLE_NAME (client_private_key, client_public_key)
+VALUES ('$CLIENT_PRIVATE_KEY', '$CLIENT_PUBLIC_KEY');
+EOF
+
+  echo "Keys have been saved to $DB_NAME."
+
   # deploy ec2 wireguard
   echo "Deploying EC2 WireGuard with Terraform..."
-  terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" || {
+  AWS_PROFILE=${PROFILE} terraform init --reconfigure
+  AWS_PROFILE=${PROFILE} terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_allocation_id=${EIP_ALLOC}" || {
   echo "Terraform apply failed."
   exit 1
 }
 
   # retrieve public IP and server public key
-  echo "Retrieving public IP and server public key..."
-  PUBLIC_IP=$(terraform output -raw public_ip)
-  SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption)
+  # echo "Retrieving public IP and server public key..."
+  # PUBLIC_IP=$(terraform output -raw public_ip)
+  SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile $PROFILE)
 
   echo -e "=========================\nPUBLIC IP AND SERVER KEY\n========================="
   echo "Public IP: $PUBLIC_IP"
@@ -62,10 +88,18 @@ up_vpn() {
 
 }
 
+read_keys() {
+  local result
+  result=$(sqlite3 $DB_NAME "SELECT client_private_key, client_public_key FROM $TABLE_NAME ORDER BY id DESC LIMIT 1;")
+
+  CLIENT_PRIVATE_KEY=$(echo "$result" | cut -d '|' -f 1)
+  CLIENT_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
+}
+
 # Function to bring down WireGuard VPN
 down_vpn() {
     echo "Destroying EC2 WireGuard Terraform deployment..."
-    terraform destroy -auto-approve -var "client_public_key=${CLIENT_PUBLIC_KEY}"
+    AWS_PROFILE=${PROFILE} terraform destroy -auto-approve -var "client_public_key=${CLIENT_PUBLIC_KEY}" -var "eip_allocation_id=${EIP_ALLOC}"
     echo "EC2 WireGuard deployment destroyed."
 }
 
@@ -76,6 +110,7 @@ remove_device_config() {
 
 config_router() {
   echo "configuring router for wireguard VPN"
+
   ssh "${USERNAME}@${ROUTER_IP}" << EOF
     opkg update
     opkg install wireguard-tools
@@ -174,7 +209,14 @@ esac
 # Main logic to handle arguments
 case "$1" in
     up)
-        up_vpn
+        if [[ -n $3 ]]; then
+          echo "Argument for configuration: $3"
+        else
+          up_vpn
+        fi
+
+        read_keys
+
         if [ "$2" = "0" ]; then
           config_router
         elif [ "$2" = "1" ]; then
@@ -188,7 +230,11 @@ case "$1" in
         elif [ "$2" = "1" ]; then
           remove_device_config
         fi
-        down_vpn
+        if [[ -n $3 ]]; then
+          echo "Argument for configuration: $3"
+        else
+          down_vpn
+        fi
         echo -e "=========================\nWIREGUARD DE-CONFIGURED\n========================="
         ;;
     *)
@@ -196,7 +242,4 @@ case "$1" in
         ;;
 esac
 
-# to ensure it is the actual IP address of the current device
-PUBLIC_IP=$(curl -sS icanhazip.com)
-curl -sS http://ip-api.com/json/$PUBLIC_IP | jq .
 cd $cwd
