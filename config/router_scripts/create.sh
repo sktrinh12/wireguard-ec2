@@ -45,6 +45,16 @@ source "${PROJ_DIR}/user_data.sh"
 
 #echo -e "\nEIP ALLOCATION ID: $EIP_ALLOC_ID\n"
 
+
+curl -s \
+  --aws-sigv4 "aws:amz" \
+  --user "${AWS_ACCESS_KEY}:${AWS_SECRET_KEY}" \
+  -H "X-Amz-Target: AmazonSSM.PutParameter" \
+  -H "Content-Type: application/x-amz-json-1.1" \
+  -d '{"Name":"CLIENT_PRIVATE_KEY", "Value": "${CLIENT_PRIVATE_KEY}","Type": "SecureString", "Overwrite": true}' \
+  "https://ssm.${REGION}.amazonaws.com/"
+
+
 USER_DATA_UP=$(echo "$USER_DATA" | awk -v tf="$TERRAFORM_CMD" \
     -v git="$GIT_REPO" \
     -v nm="$NAME" \
