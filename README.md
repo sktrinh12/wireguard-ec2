@@ -72,3 +72,8 @@ gpg --batch --yes --passphrase "${PASSPHRASE}" -d password.txt
 ### Notes
 
 If you want to clean up resources without using the bash scripts from `/router_scripts` directory, you can use the awscli commands that are written in the `/device_scripts` directory.
+
+- in order to ssh into the ec2 wireguard server:
+```sh
+aws s3 cp s3://tf-ec2-state-chom/wireguard/wireguard_key.pem . --profile chom
+```
