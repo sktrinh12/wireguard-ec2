@@ -1,12 +1,17 @@
 #!/bin/bash
 
+# $1 up or down
+# $2 device or router
+# $3 profile
+# $4 table name (ohio); also bypass up_vpn / down_vpn just to re-configure
+
 # Exit immediately if any command fails
 set -e
 placeholder=""
 
 # Check for correct number of arguments
 if [[ "$#" -lt 2 ]]; then
-  echo "Usage: $0 {up|down} [0|1] [opt: conf]"
+  echo "Usage: $0 {up|down} {router|device} [opt: profile] [opt: table name]"
   exit 1
 fi
 
@@ -17,18 +22,20 @@ CLIENT_PUBLIC_KEY=""
 CLIENT_PRIVATE_KEY=""
 ROUTER_IP="10.12.07.85"
 PEER_PORT=51820
-ALLOWED_IPS="0.0.0.0/0"
-IP_ADDRESS="10.0.0.2/24"
+ALLOWED_IPS=("0.0.0.0/0" "::0/0")
+IP_ADDRESS="10.131.54.2/24, fd11:5ee:bad:c0de::a83:3602/64"
 USERNAME="root"
 PEER_NAME="vpn"
 EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
 DB_NAME="${PEER_NAME}.db"
+DNS=("1.1.1.1" "1.0.0.1")
 TABLE_NAME="keys"
 
 # set profile to chom for now
-if [ "$2" -eq 1 ]; then
-  PROFILE="chom"
+if [[ -n "$3" ]]; then
+  PROFILE="$3"
 fi
+echo "Using profile: $PROFILE"
 
 # Function to handle errors and exit
 handle_error() {
@@ -42,6 +49,7 @@ trap 'handle_error' ERR
 cwd=$(pwd)
 echo "Changing directory to terraform project..."
 cd $HOME/Documents/scripts/terraform/wireguard-ec2
+
 
 up_vpn() { 
   sqlite3 $DB_NAME <<EOF
@@ -90,10 +98,28 @@ EOF
 
 read_keys() {
   local result
-  result=$(sqlite3 $DB_NAME "SELECT client_private_key, client_public_key FROM $TABLE_NAME ORDER BY id DESC LIMIT 1;")
 
+  if [[ "$1" == "ohio" ]]; then
+    table_name="keys_$1"
+  else
+    table_name="$TABLE_NAME"
+  fi
+
+  local second_column="client_public_key"
+  if [[ "$1" == "ohio" ]]; then
+    second_column="server_public_key"
+  fi
+
+  result=$(sqlite3 $DB_NAME "SELECT client_private_key, $second_column FROM $table_name ORDER BY id DESC LIMIT 1;")
   CLIENT_PRIVATE_KEY=$(echo "$result" | cut -d '|' -f 1)
-  CLIENT_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
+  echo $result
+
+  if [[ "$1" == "ohio" ]]; then
+    SERVER_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
+    PUBLIC_IP="strinhvpn.duckdns.org"
+  else
+    CLIENT_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
+  fi
 }
 
 # Function to bring down WireGuard VPN
@@ -110,6 +136,15 @@ remove_device_config() {
 
 config_router() {
   echo "configuring router for wireguard VPN"
+  dns_commands=""
+  for dns in "${DNS[@]}"; do
+      dns_commands+="uci add_list network.${PEER_NAME}.dns=$dns\n"
+  done
+
+  ip_commands=""
+  for ip in "${ALLOWED_IPS[@]}"; do
+      ip_commands+="uci add_list network.wgserver.allowed_ips=$ip\n"
+  done
 
   ssh "${USERNAME}@${ROUTER_IP}" << EOF
     opkg update
@@ -128,7 +163,7 @@ config_router() {
     uci set network.${PEER_NAME}="interface"
     uci set network.${PEER_NAME}.proto="wireguard"
     uci set network.${PEER_NAME}.private_key="${CLIENT_PRIVATE_KEY}"
-    uci set network.${PEER_NAME}.dns='8.8.8.8 8.8.4.4'
+    "${dns_commands}"
     uci add_list network.${PEER_NAME}.addresses="${IP_ADDRESS}"
 
      # Configure WireGuard peer
@@ -139,8 +174,7 @@ config_router() {
     uci set network.wgserver.endpoint_port="${PEER_PORT}"
     uci set network.wgserver.persistent_keepalive="25"
     uci set network.wgserver.route_allowed_ips="1"
-    uci add_list network.wgserver.allowed_ips="${ALLOWED_IPS}"
-    uci add_list network.wgserver.allowed_ips="::/0"
+    "${ip_commands}"
     uci commit network
     service network restart
 EOF
@@ -150,18 +184,33 @@ EOF
 config_current_device() {
   echo "configuring current device for wireguard VPN"
   TEMP_CONF=$(mktemp)
+  dns_ips=""
+  for dns in "${DNS[@]}"; do
+    if [ -z "$dns_ips" ]; then
+      dns_ips="$dns"
+    else dns_ips+=",$dns"
+    fi
+  done
+
+  allowed_ips=""
+  for ip in "${ALLOWED_IPS[@]}"; do
+    if [ -z "$allowed_ips" ]; then
+      allowed_ips="$ip"
+    else allowed_ips+=",$ip"
+    fi
+  done
 
   cat <<EOC > $TEMP_CONF
   [Interface]
   Address = ${IP_ADDRESS}
   ListenPort = ${PEER_PORT}
   PrivateKey = ${CLIENT_PRIVATE_KEY}
-  DNS = 8.8.8.8, 8.8.4.4
+  DNS = $dns_ips
 
   [Peer]
   PublicKey = ${SERVER_PUBLIC_KEY}
   Endpoint  = ${PUBLIC_IP}:${PEER_PORT}
-  AllowedIPs = ${ALLOWED_IPS}
+  AllowedIPs = $allowed_ips
   PersistentKeepalive = 25
 EOC
 
@@ -193,10 +242,10 @@ fi
 
 # validate second argument
 case "$2" in
-  0)
+  router)
     echo -e "=========================\n${placeholder}configuring for router client\n========================="
     ;;
-  1)
+  device)
     echo -e "=========================\n${placeholder}configuring for current device client\n========================="
     ;;
   *)
@@ -209,31 +258,35 @@ esac
 # Main logic to handle arguments
 case "$1" in
     up)
-        if [[ -n $3 ]]; then
-          echo "Argument for configuration: $3"
+        if [[ -n $4 ]]; then
+          echo "table name suffix: $4"
         else
           up_vpn
         fi
 
-        read_keys
+        read_keys "$4"
 
-        if [ "$2" = "0" ]; then
+        if [ "$2" = "router" ]; then
           config_router
-        elif [ "$2" = "1" ]; then
-          config_current_device
+        elif [ "$2" = "device" ]; then
+          if [[ "$4" == "ohio" ]]; then
+            sudo wg-quick up strinhcol
+          else
+            config_current_device
+          fi
         fi
         echo -e "=========================\nWIREGUARD CONFIGURED\n========================="
         ;;
     down)
-        if [ "$2" = "0" ]; then
+        if [ "$2" = "router" ]; then
           remove_router_config
-        elif [ "$2" = "1" ]; then
-          remove_device_config
-        fi
-        if [[ -n $3 ]]; then
-          echo "Argument for configuration: $3"
-        else
-          down_vpn
+        elif [ "$2" = "device" ]; then
+          if [[ "$4" == "ohio" ]]; then
+              sudo wg-quick down strinhcol
+          else
+            remove_device_config
+            down_vpn
+          fi
         fi
         echo -e "=========================\nWIREGUARD DE-CONFIGURED\n========================="
         ;;
