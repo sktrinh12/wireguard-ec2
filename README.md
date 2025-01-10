@@ -12,19 +12,9 @@ AWS_PROFILE={PROFILE_NAME} terraform init --reconfigure
 AWS_PROFILE={PROFILE_NAME} terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_alloc_id=${EIP_ALLOC_ID}"
 ```
 
-All of the steps are laid out in `main.sh` which can be wrapped in a `zsh` function, however it was written for a local machine.
-```bash
-wvpn() {
-  SCRIPT_PATH=path/to/terraform/project
-  if [ "$1"=="up" ]; then
-      "$SCRIPT_PATH/main.sh" "$1"
-  elif [ "$1"=="down" ]; then
-      "$SCRIPT_PATH/main.sh" "$1"
-  else
-      echo "Invalid argument: $1. Use 'up' to start or 'down' to stop the VPN."
-  fi
-}
-```
+- All of the steps are laid out in `main.sh` which is aliased as `mvpn $1 $2 $3 $4`
+- Packer has been utilised to speed up the ec2 initialisation since it creates an AMI that has wireguard and awscli installed
+
 - Within `/router_scripts` the `create.sh` file is the main script to execute. Basically a terraform executor is generated in EC2 which has all IAM rules/policies integrated to spin up another EC2 instance that installs wireguard. This was designed for an embedded device (GLinet) therefore terraform nor awscli couldn't be installed and only `cURL` commands can be executed. Upon completion of the wireguard EC2 instance, the terraform executor is terminated.
 
 
