@@ -20,7 +20,7 @@ variable "script_file" {
 
 variable "ami_id" {
   description = "The AMI ID for the instance"
-  default     = "ami-0e86e20dae9224db8"
+  default     = "ami-0e0115d5655e9f3f9"
 }
 
 variable "instance_type" {
