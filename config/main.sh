@@ -112,7 +112,6 @@ read_keys() {
 
   result=$(sqlite3 $DB_NAME "SELECT client_private_key, $second_column FROM $table_name ORDER BY id DESC LIMIT 1;")
   CLIENT_PRIVATE_KEY=$(echo "$result" | cut -d '|' -f 1)
-  echo $result
 
   if [[ "$1" == "ohio" ]]; then
     SERVER_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
