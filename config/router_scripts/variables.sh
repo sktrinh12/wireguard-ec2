@@ -1,7 +1,6 @@
 #!/bin/sh
 
 ALLOWED_IPS="0.0.0.0/0"
-AMI_ID="ami-0e86e20dae9224db8"
 REGION="us-east-1"
 NAME="wireguard-ec2"
 GIT_REPO="https://github.com/sktrinh12/${NAME}.git"
