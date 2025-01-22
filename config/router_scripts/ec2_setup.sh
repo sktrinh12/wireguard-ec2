@@ -1,14 +1,13 @@
 #!/bin/sh
 
-AMI_ID="$1"
-CLIENT_PUBLIC_KEY="$2"
-INSTANCE_PROFILE_NAME="$3"
-INSTANCE_TYPE="$4"
-REGION="$5"
-AWS_ACCESS_KEY="$6"
-AWS_SECRET_KEY="$7"
-USER_DATA_IN="$8"
-PROJ_DIR="$9"
+CLIENT_PUBLIC_KEY="$1"
+INSTANCE_PROFILE_NAME="$2"
+INSTANCE_TYPE="$3"
+REGION="$4"
+AWS_ACCESS_KEY="$5"
+AWS_SECRET_KEY="$6"
+USER_DATA_IN="$7"
+PROJ_DIR="$8"
 STATUS="Not Ready"
 
 source "$PROJ_DIR/user_data.sh"
@@ -31,6 +30,31 @@ USER_DATA_APPEND_SSM=$(echo "$USER_DATA_SSM_STATUS" | awk \
 }')
 
 eval "$USER_DATA_APPEND_SSM"
+
+
+echo -e "\n=============================="
+echo "        GRAB LATEST AMI       "
+echo "=============================="
+
+curl -s "https://ec2.${REGION}.amazonaws.com/?" \
+--aws-sigv4 "aws:amz:${REGION}:ec2" \
+--user "${AWS_ACCESS_KEY}:${AWS_SECRET_KEY}" \
+--header "Content-Type: application/x-www-form-urlencoded" \
+--data-urlencode "Action=DescribeImages" \
+--data-urlencode "Version=2016-11-15" \
+--data-urlencode "Filter.1.Name=name" \
+--data-urlencode "Filter.1.Value.1=ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*" \
+--data-urlencode "Filter.2.Name=root-device-type" \
+--data-urlencode "Filter.2.Value.1=ebs" \
+--data-urlencode "Filter.3.Name=virtualization-type" \
+--data-urlencode "Filter.3.Value.1=hvm" \
+--data-urlencode "Filter.4.Name=is-public" \
+--data-urlencode "Filter.4.Value.1=true" > describe-amis.xml
+
+AMI_ID=$(cat describe-amis.xml | xmllint --xpath "//*[local-name()='item']/*[local-name()='imageId']/text()" - | paste -d' ' - <(cat describe-amis.xml | xmllint --xpath "//*[local-name()='item']/*[local-name()='creationDate']/text()" -) | sort -k2 -r | head -n 1 | awk '{print $1}')
+
+echo $AMI_ID
+
 echo -e "\n=============================="
 echo "   Deploying EC2 Instance     "
 echo "=============================="
