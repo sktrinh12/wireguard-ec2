@@ -6,13 +6,13 @@ TERRAFORM_CMD="apply"
 CLIENT_PRIVATE_KEY=$(wg genkey)
 CLIENT_PUBLIC_KEY=$(echo $CLIENT_PRIVATE_KEY | wg pubkey)
 PROJ_DIR=$(dirname "$0")
-CURL_TIMEOUT=10
-if [ -f "${PROJ_DIR}/.conf" ]; then
-    source "${PROJ_DIR}/.conf"
-else
-    echo "Configuration file, .conf not found!"
-    exit 1
-fi
+# CURL_TIMEOUT=10
+# if [ -f "${PROJ_DIR}/.conf" ]; then
+#     source "${PROJ_DIR}/.conf"
+# else
+#     echo "Configuration file, .conf not found!"
+#     exit 1
+# fi
 
 if [ -f "$PROJ_DIR/norun.lock" ]; then
     echo "Lock file exists. $0 Exiting..."

@@ -12,8 +12,9 @@ POLICY_NAME="tf-exec-policy"
 PEER_NAME="vpn"
 ROLE_NAME="tf-exec-role"
 KEY_PREFIX="wireguard"
-CREDS_PATH="/mnt/creds"
-GPG_PASSPHRASE=$(gpg --batch --yes --decrypt "${CREDS_PATH}/input.gpg")
+CREDS_PATH="/root/creds"
+EIP_ALLOC_ID="eipalloc-0f3204f9f1538ed2f"
+GPG_PASSPHRASE=$(cat ${CREDS_PATH}/input.txt)
 
 if [ "$1" == "1" ]; then
     GPG_FILE="${CREDS_PATH}/aws_chom.gpg"
