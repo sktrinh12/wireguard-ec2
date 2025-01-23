@@ -31,6 +31,9 @@ ssh-copy-id -i ~/.ssh/glinet_mt300.pub root@${IP_ADDR_DEVICE}
 
 When prompted name the file accordingly, in this case `glinet_mt300` Then copy the public key to the glinet device using the `ssh-copy-id` command.
 
+- resource for extending root parition: [link](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
+    * install git: `opkg update && opkg install git git-http`
+
 ### Testing the connection
 
 ```
