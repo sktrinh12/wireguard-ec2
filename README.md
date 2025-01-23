@@ -34,7 +34,7 @@ When prompted name the file accordingly, in this case `glinet_mt300` Then copy t
 - resource for extending root parition: [link](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
     * install packages:
 ```sh
-opkg update && opkg install git git-http gpg-input libxml2-utils coreutils-paste jq curl gnupg wireguard-tools
+opkg update && opkg install git git-http gpg-input libxml2-utils coreutils-paste jq curl wireguard-tools coreutils-base64
 ```
 
 ### Testing the connection
