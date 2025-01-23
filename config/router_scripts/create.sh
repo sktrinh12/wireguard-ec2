@@ -144,7 +144,7 @@ echo "======================================="
 
 "${PROJ_DIR}/iam_ec2_delete.sh" "$ROLE_NAME" "$REGION" "$INSTANCE_PROFILE_NAME" "$POLICY_NAME" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$INSTANCE_ID" "$PROJ_DIR"
 
-echo "Getting PUBLIC_IP & SERVER_PUBLIC_KEY"
+#echo "Getting PUBLIC_IP & SERVER_PUBLIC_KEY"
 
 #$(echo "$EIP_OUTPUT" | xmllint --xpath "string(//*[local-name()='addressesSet']/*[local-name()='item']/*[local-name()='publicIp'])" - )
 
