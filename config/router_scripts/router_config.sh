@@ -26,7 +26,7 @@ uci -q delete network.${PEER_NAME}
 uci set network.${PEER_NAME}="interface"
 uci set network.${PEER_NAME}.proto="wireguard"
 uci set network.${PEER_NAME}.private_key="${CLIENT_PRIVATE_KEY}"
-uci set network.${PEER_NAME}.dns='8.8.8.8 8.8.4.4'
+uci set network.${PEER_NAME}.dns='1.1.1.1 1.0.0.1'
 uci add_list network.${PEER_NAME}.addresses="${IP_ADDRESS}"
 
  # Configure WireGuard peer
