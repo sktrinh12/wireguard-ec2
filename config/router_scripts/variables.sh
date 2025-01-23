@@ -16,7 +16,9 @@ CREDS_PATH="/root/creds"
 EIP_ALLOC_ID="eipalloc-0f3204f9f1538ed2f"
 GPG_PASSPHRASE=$(cat ${CREDS_PATH}/input.txt)
 
-if [ "$1" == "1" ]; then
+echo "profile: $1"
+
+if [ "$1" == "chom" ]; then
     GPG_FILE="${CREDS_PATH}/aws_chom.gpg"
     BUCKET_NAME="tf-ec2-state-chom"
     BUCKET_REGION="us-east-1"
