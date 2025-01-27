@@ -93,7 +93,7 @@ echo "  Waiting for IAM propogation  "
 echo "==============================="
 sleep 4
 
-"${PROJ_DIR}/ec2_setup.sh" "$AMI_ID" "$CLIENT_PUBLIC_KEY" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$USER_DATA_DOWN" "$PROJ_DIR"
+"${PROJ_DIR}/ec2_setup.sh" "$CLIENT_PUBLIC_KEY" "$INSTANCE_PROFILE_NAME" "$INSTANCE_TYPE" "$REGION" "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$USER_DATA_DOWN" "$PROJ_DIR"
 
 INSTANCE_ID=$(cat "${PROJ_DIR}/instance_id")
 echo -e "\n======================================="
