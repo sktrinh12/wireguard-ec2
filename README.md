@@ -15,7 +15,7 @@ AWS_PROFILE={PROFILE_NAME} terraform apply -auto-approve -var="client_public_key
 - All of the steps are laid out in `main.sh` which is aliased as `mvpn $1 $2 $3 $4`
 - Packer has been utilised to speed up the ec2 initialisation since it creates an AMI that has wireguard and awscli installed
 
-- Within `/router_scripts` the `create.sh` file is the main script to execute. Basically a terraform executor is generated in EC2 which has all IAM rules/policies integrated to spin up another EC2 instance that installs wireguard. This was designed for an embedded device (GLinet) therefore terraform nor awscli couldn't be installed and only `cURL` commands can be executed. Upon completion of the wireguard EC2 instance, the terraform executor is terminated.
+- Within `/router_scripts` the `create.sh` file is the main script to execute. Pass the profile argument or leave blank to be the default. Basically a terraform executor is generated in EC2 which has all IAM rules/policies integrated to spin up another EC2 instance that installs wireguard. This was designed for an embedded device (GLinet) therefore terraform nor awscli couldn't be installed and only `cURL` commands can be executed. Upon completion of the wireguard EC2 instance, the terraform executor is terminated.
 
 
 ### Router setup using `OpenWRT`
@@ -31,10 +31,10 @@ ssh-copy-id -i ~/.ssh/glinet_mt300.pub root@${IP_ADDR_DEVICE}
 
 When prompted name the file accordingly, in this case `glinet_mt300` Then copy the public key to the glinet device using the `ssh-copy-id` command.
 
-- resource for extending root parition: [link](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
+- resource for extending root partition: [link](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
     * install packages:
 ```sh
-opkg update && opkg install git git-http gpg-input libxml2-utils coreutils-paste jq curl wireguard-tools coreutils-base64
+opkg update && opkg install git git-http gnupg libxml2-utils coreutils-paste jq curl wireguard-tools coreutils-base64
 ```
 
 ### Testing the connection
@@ -72,4 +72,30 @@ If you want to clean up resources without using the bash scripts from `/router_s
 - in order to ssh into the ec2 wireguard server:
 ```sh
 aws s3 cp s3://tf-ec2-state-chom/wireguard/wireguard_key.pem . --profile chom
+```
+
+##### wireless config
+```sh
+config wifi-device 'radio0'
+        option type 'mac80211'
+        option path 'platform/10300000.wmac'
+        option channel '1'
+        option band '2g'
+        option cell_density '0'
+
+config wifi-iface 'wifinet2'
+        option device 'radio0'
+        option mode 'ap'
+        option network 'lan'
+        option ssid 'openwrt'
+        option encryption 'psk2'
+        option key '${PASS}'
+
+config wifi-iface 'wifinet1'
+        option device 'radio0'
+        option mode 'sta'
+        option network 'wwan'
+        option ssid 'CASA LAURELES '
+        option encryption 'psk2'
+        option key '${PASS}'
 ```
