@@ -20,10 +20,10 @@ PUBLIC_IP="34.193.198.229"
 SERVER_PUBLIC_KEY=""
 CLIENT_PUBLIC_KEY=""
 CLIENT_PRIVATE_KEY=""
-ROUTER_IP="10.12.07.85"
+ROUTER_IP="192.168.1.1"
 PEER_PORT=51820
 ALLOWED_IPS=("0.0.0.0/0" "::0/0")
-IP_ADDRESS="10.131.54.2/24, fd11:5ee:bad:c0de::a83:3602/64"
+IP_ADDRESS="10.131.54.2/24"
 USERNAME="root"
 PEER_NAME="vpn"
 EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
@@ -137,18 +137,15 @@ config_router() {
   echo "configuring router for wireguard VPN"
   dns_commands=""
   for dns in "${DNS[@]}"; do
-      dns_commands+="uci add_list network.${PEER_NAME}.dns=$dns\n"
+      dns_commands+="uci add_list network.${PEER_NAME}.dns=$dns"$'\n'
   done
 
   ip_commands=""
   for ip in "${ALLOWED_IPS[@]}"; do
-      ip_commands+="uci add_list network.wgserver.allowed_ips=$ip\n"
+      ip_commands+="uci add_list network.wgserver.allowed_ips=$ip"$'\n'
   done
 
   ssh "${USERNAME}@${ROUTER_IP}" << EOF
-    opkg update
-    opkg install wireguard-tools
-
     # Configure firewall
     uci rename firewall.@zone[0]="lan"
     uci rename firewall.@zone[1]="wan"
@@ -162,7 +159,7 @@ config_router() {
     uci set network.${PEER_NAME}="interface"
     uci set network.${PEER_NAME}.proto="wireguard"
     uci set network.${PEER_NAME}.private_key="${CLIENT_PRIVATE_KEY}"
-    "${dns_commands}"
+    $(echo -e "${dns_commands}")
     uci add_list network.${PEER_NAME}.addresses="${IP_ADDRESS}"
 
      # Configure WireGuard peer
@@ -173,7 +170,7 @@ config_router() {
     uci set network.wgserver.endpoint_port="${PEER_PORT}"
     uci set network.wgserver.persistent_keepalive="25"
     uci set network.wgserver.route_allowed_ips="1"
-    "${ip_commands}"
+    $(echo -e "${ip_commands}")
     uci commit network
     service network restart
 EOF
