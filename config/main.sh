@@ -86,8 +86,6 @@ EOF
 }
 
   # retrieve public IP and server public key
-  # echo "Retrieving public IP and server public key..."
-  # PUBLIC_IP=$(terraform output -raw public_ip)
   SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile $PROFILE)
 
   echo -e "=========================\nPUBLIC IP AND SERVER KEY\n========================="
