@@ -169,6 +169,8 @@ config_router() {
     uci set network.wgserver.persistent_keepalive="25"
     uci set network.wgserver.route_allowed_ips="1"
     $(echo -e "${ip_commands}")
+    uci set network.vpn.route_allowed_ips='1'
+    uci set network.${PEER_NAME}.metric='0'
     uci commit network
     service network restart
 EOF
@@ -274,6 +276,7 @@ case "$1" in
     down)
         if [ "$2" = "router" ]; then
           remove_router_config
+          down_vpn
         elif [ "$2" = "device" ]; then
           if [[ "$4" == "ohio" ]]; then
               sudo wg-quick down strinhcol
