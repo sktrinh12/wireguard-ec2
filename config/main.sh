@@ -85,8 +85,6 @@ EOF
   exit 1
 }
 
-  # retrieve public IP and server public key
-  SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile $PROFILE)
 
   echo -e "=========================\nPUBLIC IP AND SERVER KEY\n========================="
   echo "Public IP: $PUBLIC_IP"
@@ -108,6 +106,10 @@ read_keys() {
     second_column="server_public_key"
   fi
 
+  # retrieve public IP and server public key
+  SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile $PROFILE)
+
+  # retrieve client_private key from sqlite3
   result=$(sqlite3 $DB_NAME "SELECT client_private_key, $second_column FROM $table_name ORDER BY id DESC LIMIT 1;")
   CLIENT_PRIVATE_KEY=$(echo "$result" | cut -d '|' -f 1)
 
