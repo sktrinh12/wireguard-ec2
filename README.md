@@ -99,3 +99,34 @@ config wifi-iface 'wifinet1'
         option encryption 'psk2'
         option key '${PASS}'
 ```
+
+##### add another device
+
+```sh
+# if starting from scratch:
+wg genkey | tee phone_privatekey | wg pubkey > phone_publickey
+
+# copy the private and public key for client
+# they should already be saved in the wg app on phone
+cat ./phone_publickey
+cat ./phone_privatekey
+
+# ssh into ec2 vpn
+aws s3 cp s3://tf-ec2-state-chom/wireguard/wireguard_key.pem . --profile chom
+chmod 400 wireguard_key.pem
+truncate -s 0 ~/.ssh/known_hosts
+ssh -i wireguard_key.pem ubuntu@ec2-34-193-198-229.compute-1.amazonaws.com
+
+# add client's public key to server
+[Peer]
+PublicKey = <phone_publickey>
+AllowedIPs = 10.131.54.3/24
+
+# save and exit then restart wg server
+sudo wg-quick down wg0
+sudo wg-quick up wg0
+
+# copy the phone_publickey to Notes
+# copy the server pubickey to Notes
+aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile chom
+```
