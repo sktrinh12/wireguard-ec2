@@ -129,4 +129,6 @@ sudo wg-quick up wg0
 # copy the phone_publickey to Notes
 # copy the server pubickey to Notes
 aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile chom
+
+# update the server_public_key within the wireguard config on client
 ```
