@@ -131,4 +131,10 @@ sudo wg-quick up wg0
 aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile chom
 
 # update the server_public_key within the wireguard config on client
+# the quick way (when using the same phone keys is: 
+# 1 - disconnect from vpn
+# 2 - ssh into the wg vpn server on ec2
+# 3 - edit the wg0.conf file to use the phone publickey to server
+# 4 - restart the wg0 server
+# 5 - output the SERVER_PUBLIC_KEY and copy it to the client (phone) conf file
 ```
