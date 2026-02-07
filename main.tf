@@ -36,9 +36,24 @@ resource "aws_instance" "wireguard" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/${var.script_file}",
+      "chmod +x /usr/local/bin/${var.script_file_2}",
+      "echo \"alias warp='/usr/local/bin/${var.script_file_2}'\" >> /home/ubuntu/.bashrc",
       "echo ${var.client_public_key} > /home/ubuntu/client_public_key",
       "/tmp/${var.script_file}"
     ]
+
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = tls_private_key.private_key.private_key_pem
+      host        = self.public_ip
+    }
+  }
+
+
+  provisioner "file" {
+    source      = "config/${var.script_file_2}"
+    destination = "/usr/local/bin/${var.script_file_2}"
 
     connection {
       type        = "ssh"
