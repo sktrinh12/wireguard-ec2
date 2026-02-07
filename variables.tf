@@ -18,6 +18,11 @@ variable "script_file" {
   default     = "setup.sh"
 }
 
+variable "script_file_2" {
+  description = "Name of script file 2"
+  default     = "cloudflare-warp.sh"
+}
+
 variable "ami_id" {
   description = "The AMI ID for the instance"
   default     = "ami-0e0115d5655e9f3f9"
