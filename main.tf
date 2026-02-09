@@ -21,46 +21,37 @@ resource "aws_instance" "wireguard" {
   key_name      = aws_key_pair.wg_key.key_name
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
 
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = tls_private_key.private_key.private_key_pem
+    host        = self.public_ip
+  }
+
   provisioner "file" {
     source      = "config/${var.script_file}"
     destination = "/tmp/${var.script_file}"
+  }
 
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = tls_private_key.private_key.private_key_pem
-      host        = self.public_ip
-    }
+  provisioner "file" {
+    content     = templatefile("${path.module}/config/cloudflare-warp.sh.tpl", {
+      wgcf_private_key = var.wgcf_private_key
+      wgcf_public_key  = var.wgcf_public_key
+      wgcf_address_v4  = var.wgcf_address_v4
+      wgcf_address_v6  = var.wgcf_address_v6
+    })
+    destination = "/tmp/${replace(var.script_file_2, ".tpl", "")}"
   }
 
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/${var.script_file}",
-      "chmod +x /usr/local/bin/${var.script_file_2}",
-      "echo \"alias warp='/usr/local/bin/${var.script_file_2}'\" >> /home/ubuntu/.bashrc",
+      "chmod +x /tmp/${replace(var.script_file_2, ".tpl", "")}",
+      "sudo install -m 755 /tmp/${replace(var.script_file_2, ".tpl", "")} /usr/local/bin/${replace(var.script_file_2, ".tpl", "")}",
+      "sudo ln -sf /usr/local/bin/${replace(var.script_file_2, ".tpl", "")} /usr/local/bin/warp",
       "echo ${var.client_public_key} > /home/ubuntu/client_public_key",
       "/tmp/${var.script_file}"
     ]
-
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = tls_private_key.private_key.private_key_pem
-      host        = self.public_ip
-    }
-  }
-
-
-  provisioner "file" {
-    source      = "config/${var.script_file_2}"
-    destination = "/usr/local/bin/${var.script_file_2}"
-
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = tls_private_key.private_key.private_key_pem
-      host        = self.public_ip
-    }
   }
 
   tags = {
