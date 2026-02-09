@@ -50,6 +50,11 @@ cwd=$(pwd)
 echo "Changing directory to terraform project..."
 cd $HOME/Documents/scripts/terraform/wireguard-ec2
 
+WGCF_KEY=$(grep '^key=' .env | cut -d '=' -f2-)
+IPV6=$(grep '^ipv6=' .env | cut -d '=' -f2-)
+
+# echo $WGCF_KEY
+# echo $IPV6
 
 up_vpn() { 
   sqlite3 $DB_NAME <<EOF
@@ -80,7 +85,10 @@ EOF
   # deploy ec2 wireguard
   echo "Deploying EC2 WireGuard with Terraform..."
   AWS_PROFILE=${PROFILE} terraform init --reconfigure
-  AWS_PROFILE=${PROFILE} terraform apply -auto-approve -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_allocation_id=${EIP_ALLOC}" || {
+  AWS_PROFILE=${PROFILE} terraform apply -auto-approve \
+    -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_allocation_id=${EIP_ALLOC}" \
+    -var="wgcf_private_key=$WGCF_KEY" \
+    -var="wgcf_address_v6=$IPV6" || {
   echo "Terraform apply failed."
   exit 1
 }
@@ -124,7 +132,11 @@ read_keys() {
 # Function to bring down WireGuard VPN
 down_vpn() {
     echo "Destroying EC2 WireGuard Terraform deployment..."
-    AWS_PROFILE=${PROFILE} terraform destroy -auto-approve -var "client_public_key=${CLIENT_PUBLIC_KEY}" -var "eip_allocation_id=${EIP_ALLOC}"
+    AWS_PROFILE=${PROFILE} terraform destroy -auto-approve \
+      -var "client_public_key=${CLIENT_PUBLIC_KEY}" \
+      -var "eip_allocation_id=${EIP_ALLOC}" \
+      -var="wgcf_private_key=$WGCF_KEY" \
+      -var="wgcf_address_v6=$IPV6"
     echo "EC2 WireGuard deployment destroyed."
 }
 
