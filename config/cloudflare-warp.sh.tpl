@@ -1,6 +1,5 @@
 #!/bin/bash
 # warp-doublehop.sh - Simple WireGuard → WARP double-hop for EC2
-
 set -e
 
 RED='\033[0;31m'
@@ -9,9 +8,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-print_status() { echo -e "${GREEN}[✓]${NC} $1"; }
-print_error() { echo -e "${RED}[✗]${NC} $1"; }
-print_info() { echo -e "${BLUE}[i]${NC} $1"; }
+print_status() { echo -e "$${GREEN}[✓]$${NC} $1"; }
+print_error() { echo -e "$${RED}[✗]$${NC} $1"; }
+print_info() { echo -e "$${BLUE}[i]$${NC} $1"; }
 
 if [[ $EUID -ne 0 ]]; then
     print_error "Run with sudo"
@@ -25,38 +24,24 @@ setup() {
     apt-get update -qq
     DEBIAN_FRONTEND=noninteractive apt-get install -y openresolv curl wget -qq
     
-    # Install wgcf
-    print_status "Installing wgcf..."
-    ARCH=$(dpkg --print-architecture)
-    wget -q -O /usr/local/bin/wgcf \
-        "https://github.com/ViRb3/wgcf/releases/download/v2.2.30/wgcf_2.2.30_linux_${ARCH}"
-    chmod +x /usr/local/bin/wgcf
-    
-    # Register with WARP
-    cd /root
-    rm -f wgcf-account.toml wgcf-profile.conf
-    print_status "Registering with Cloudflare WARP..."
-    wgcf register
-    wgcf generate
-    
-    # Add policy routing to config
-    awk '
-    /^\[Interface\]/ { in_interface=1; print; next }
-    /^\[Peer\]/ { 
-        if (in_interface) {
-            print "Table = off"
-            print "PostUp = ip route add default dev wgcf table 1000"
-            print "PostUp = ip rule add from 10.131.54.0/24 lookup 1000 pref 100"
-            print "PostDown = ip rule del pref 100 2>/dev/null || true"
-            print "PostDown = ip route flush table 1000 2>/dev/null || true"
-            print ""
-            in_interface=0
-        }
-        print
-        next
-    }
-    { print }
-    ' wgcf-profile.conf > /etc/wireguard/wgcf.conf
+    # Create wgcf config
+    cat << 'EOF' > /etc/wireguard/wgcf.conf
+[Interface]
+PrivateKey = ${wgcf_private_key}
+Address = ${wgcf_address_v4}, ${wgcf_address_v6}
+DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
+MTU = 1280
+Table = off
+PostUp = ip route add default dev wgcf table 1000
+PostUp = ip rule add from 10.131.54.0/24 lookup 1000 pref 100
+PostDown = ip rule del pref 100 2>/dev/null || true
+PostDown = ip route flush table 1000 2>/dev/null || true
+
+[Peer]
+PublicKey = ${wgcf_public_key}
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = engage.cloudflareclient.com:2408
+EOF
     chmod 600 /etc/wireguard/wgcf.conf
     
     # Ensure wg0 has IP forwarding
@@ -71,7 +56,7 @@ setup() {
 
 start() {
     print_status "Starting double-hop mode..."
-    wg-quick down wg0
+    wg-quick down wg0 2>/dev/null || true
     sleep 1
     wg-quick up wgcf
     sleep 1
@@ -129,7 +114,7 @@ status() {
     echo "══════════════════════════════════════════"
 }
 
-case "${1:-}" in
+case "$${1:-}" in
     setup)
         setup
         ;;
@@ -145,7 +130,7 @@ case "${1:-}" in
     *)
         echo "Usage: $0 {setup|start|stop|status}"
         echo ""
-        echo "  setup   - First time: install wgcf & register with WARP"
+        echo "  setup   - First time: create wgcf.conf with your credentials"
         echo "  start   - Enable double-hop (EC2 → WARP)"
         echo "  stop    - Disable double-hop (back to one-hop)"
         echo "  status  - Show current state"
