@@ -19,8 +19,8 @@ variable "script_file" {
 }
 
 variable "script_file_2" {
-  description = "Name of script file 2"
-  default     = "cloudflare-warp.sh"
+  description = "Name of script file 2 template"
+  default     = "cloudflare-warp.sh.tpl"
 }
 
 variable "ami_id" {
@@ -42,4 +42,24 @@ variable "bucket" {
   description = "bucket name of s3"
   type        = string
   default     = "tf-ec2-state-chom"
+}
+
+variable "wgcf_private_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "wgcf_public_key" {
+  description =  "cloudflare's key"
+  type        = string
+  default     = "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
+}
+
+variable "wgcf_address_v4" {
+  type    = string
+  default = "172.16.0.2/32"
+}
+
+variable "wgcf_address_v6" {
+  type    = string
 }
