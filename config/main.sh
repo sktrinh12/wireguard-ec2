@@ -48,7 +48,7 @@ trap 'handle_error' ERR
 
 cwd=$(pwd)
 echo "Changing directory to terraform project..."
-cd $HOME/Documents/scripts/terraform/wireguard-ec2
+cd "$HOME/Documents/scripts/terraform/wireguard-ec2"
 
 WGCF_KEY=$(grep '^key=' .env | cut -d '=' -f2-)
 IPV6=$(grep '^ipv6=' .env | cut -d '=' -f2-)
@@ -57,12 +57,20 @@ IPV6=$(grep '^ipv6=' .env | cut -d '=' -f2-)
 # echo $IPV6
 
 up_vpn() { 
-  sqlite3 $DB_NAME <<EOF
+  sqlite3 "$DB_NAME" <<EOF
   CREATE TABLE IF NOT EXISTS $TABLE_NAME (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       client_private_key TEXT NOT NULL,
       client_public_key TEXT NOT NULL
   );
+EOF
+
+sqlite3 "$DB_NAME" <<EOF
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_time INTEGER,
+    end_time INTEGER
+);
 EOF
 
   # generate client keys
@@ -81,6 +89,14 @@ VALUES ('$CLIENT_PRIVATE_KEY', '$CLIENT_PUBLIC_KEY');
 EOF
 
   echo "Keys have been saved to $DB_NAME."
+
+  START_TIME=$(date +%s)
+
+  sqlite3 $DB_NAME <<EOF
+INSERT INTO sessions (start_time) VALUES ($START_TIME);
+EOF
+
+  echo "VPN session started at: $(date -d @$START_TIME '+%Y-%m-%d %H:%M:%S')"
 
   # deploy ec2 wireguard
   echo "Deploying EC2 WireGuard with Terraform..."
@@ -115,7 +131,7 @@ read_keys() {
   fi
 
   # retrieve public IP and server public key
-  SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile $PROFILE)
+  SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile "$PROFILE")
 
   # retrieve client_private key from sqlite3
   result=$(sqlite3 $DB_NAME "SELECT client_private_key, $second_column FROM $table_name ORDER BY id DESC LIMIT 1;")
@@ -127,6 +143,30 @@ read_keys() {
   else
     CLIENT_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
   fi
+}
+
+# upon 'down' of vpn, print out elapsed time
+print_session_time() {
+  local result
+  result=$(sqlite3 $DB_NAME "SELECT id,start_time FROM sessions WHERE end_time IS NULL ORDER BY id DESC LIMIT 1;")
+
+  local session_id=$(echo "$result" | cut -d'|' -f1)
+  local start_time=$(echo "$result" | cut -d'|' -f2)
+
+  if [[ -z "$session_id" ]]; then
+    echo "No active VPN session found."
+    return
+  fi
+
+  local end_time=$(date +%s)
+
+  sqlite3 $DB_NAME "UPDATE sessions SET end_time=$end_time WHERE id=$session_id;"
+
+  local duration=$((end_time - start_time))
+
+  echo "VPN started : $(date -d @$start_time '+%Y-%m-%d %H:%M:%S')"
+  echo "VPN ended   : $(date -d @$end_time '+%Y-%m-%d %H:%M:%S')"
+  echo "Duration    : $(printf '%02d:%02d:%02d\n' $((duration/3600)) $((duration%3600/60)) $((duration%60)))"
 }
 
 # Function to bring down WireGuard VPN
@@ -299,6 +339,7 @@ case "$1" in
             down_vpn
           fi
         fi
+        print_session_time
         echo -e "=========================\nWIREGUARD DE-CONFIGURED\n========================="
         ;;
     *)
