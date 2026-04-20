@@ -16,7 +16,7 @@ if [[ "$#" -lt 2 ]]; then
 fi
 
 PROFILE="default"
-PUBLIC_IP="34.193.198.229"
+PUBLIC_IP=""
 SERVER_PUBLIC_KEY=""
 CLIENT_PUBLIC_KEY=""
 CLIENT_PRIVATE_KEY=""
@@ -26,16 +26,33 @@ ALLOWED_IPS=("0.0.0.0/0" "::0/0")
 IP_ADDRESS="10.131.54.2/24"
 USERNAME="root"
 PEER_NAME="vpn"
-EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
+EIP_ALLOC=""
 DB_NAME="${PEER_NAME}.db"
 DNS=("1.1.1.1" "1.0.0.1")
 TABLE_NAME="keys"
 
-# set profile to chom for now
 if [[ -n "$3" ]]; then
   PROFILE="$3"
 fi
 echo "Using profile: $PROFILE"
+
+# Set profile-specific values
+case "$PROFILE" in
+  chom)
+    EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
+    PUBLIC_IP="34.193.198.229"
+    ;;
+  default)
+    EIP_ALLOC="eipalloc-01506a2704f7f5899"
+    PUBLIC_IP="50.16.66.171"
+    ;;
+  *)
+    echo "Unknown profile: $PROFILE. Add it to the profile case block."
+    exit 1
+    ;;
+esac
+
+echo "Using EIP_ALLOC: $EIP_ALLOC / PUBLIC_IP: $PUBLIC_IP"
 
 # Function to handle errors and exit
 handle_error() {
@@ -52,9 +69,6 @@ cd "$HOME/Documents/scripts/terraform/wireguard-ec2"
 
 WGCF_KEY=$(grep '^key=' .env | cut -d '=' -f2-)
 IPV6=$(grep '^ipv6=' .env | cut -d '=' -f2-)
-
-# echo $WGCF_KEY
-# echo $IPV6
 
 up_vpn() { 
   sqlite3 "$DB_NAME" <<EOF
