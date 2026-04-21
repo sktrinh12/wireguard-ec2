@@ -12,6 +12,16 @@ variable "ami_prefix" {
   default = "ubuntu-wireguard-linux-aws"
 }
 
+variable "aws_profile" {
+  type    = string
+  default = "default"
+}
+
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}
+
 locals {
   timestamp = formatdate("YYYY-DD-MM-hh-mm", timestamp())
 }
@@ -19,8 +29,8 @@ locals {
 source "amazon-ebs" "ubuntu-wireguard" {
   ami_name      = "${var.ami_prefix}-${local.timestamp}"
   instance_type = "t2.micro"
-  region        = "us-east-1"
-  profile = "chom"
+  region        = var.aws_region
+  profile = var.aws_profile
   source_ami_filter {
     filters = {
       name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
