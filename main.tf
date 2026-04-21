@@ -9,6 +9,7 @@ resource "aws_key_pair" "wg_key" {
 }
 
 resource "aws_s3_object" "ssh_private_key" {
+  provider = aws.bucket
   bucket = var.bucket
   key    = "wireguard/${var.name}_key.pem"
   content = tls_private_key.private_key.private_key_pem
