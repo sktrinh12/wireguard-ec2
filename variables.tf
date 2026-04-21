@@ -1,3 +1,9 @@
+variable "aws_profile" {
+  description = "AWS profile to use"
+  type        = string
+  default     = "default"
+}
+
 variable "client_public_key" {
   description = "Public key of the client"
   type        = string
@@ -13,6 +19,11 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "bucket_region" {
+  description = "Region where the S3 bucket lives"
+  type        = string
+}
+
 variable "script_file" {
   description = "Name of script file"
   default     = "setup.sh"
@@ -25,7 +36,6 @@ variable "script_file_2" {
 
 variable "ami_id" {
   description = "The AMI ID for the instance"
-  default     = "ami-0e0115d5655e9f3f9"
 }
 
 variable "instance_type" {
@@ -41,7 +51,6 @@ variable "eip_allocation_id" {
 variable "bucket" {
   description = "bucket name of s3"
   type        = string
-  default     = "tf-ec2-state-chom"
 }
 
 variable "wgcf_private_key" {
