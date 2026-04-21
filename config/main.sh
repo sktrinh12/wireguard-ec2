@@ -41,10 +41,16 @@ case "$PROFILE" in
   chom)
     EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
     PUBLIC_IP="34.193.198.229"
+    BUCKET_NAME="tf-ec2-state-chom"
+    BUCKET_REGION="us-east-1"
+    AMI_ID="ami-0e0115d5655e9f3f9"
     ;;
   default)
     EIP_ALLOC="eipalloc-01506a2704f7f5899"
     PUBLIC_IP="50.16.66.171"
+    BUCKET_NAME="tf-ec2-state"
+    BUCKET_REGION="us-east-2"
+    AMI_ID="ami-011663bc60ba6ded7"
     ;;
   *)
     echo "Unknown profile: $PROFILE. Add it to the profile case block."
@@ -116,8 +122,12 @@ EOF
   echo "Deploying EC2 WireGuard with Terraform..."
   AWS_PROFILE=${PROFILE} terraform init --reconfigure
   AWS_PROFILE=${PROFILE} terraform apply -auto-approve \
-    -var="client_public_key=${CLIENT_PUBLIC_KEY}" -var="eip_allocation_id=${EIP_ALLOC}" \
+    -var="client_public_key=${CLIENT_PUBLIC_KEY}" \
+    -var="eip_allocation_id=${EIP_ALLOC}" \
     -var="wgcf_private_key=$WGCF_KEY" \
+    -var="bucket=${BUCKET_NAME}" \
+    -var="bucket_region=${BUCKET_REGION}" \
+    -var="ami_id=${AMI_ID}" \
     -var="wgcf_address_v6=$IPV6" || {
   echo "Terraform apply failed."
   exit 1
@@ -190,6 +200,9 @@ down_vpn() {
       -var "client_public_key=${CLIENT_PUBLIC_KEY}" \
       -var "eip_allocation_id=${EIP_ALLOC}" \
       -var="wgcf_private_key=$WGCF_KEY" \
+      -var="bucket=${BUCKET_NAME}" \
+      -var="bucket_region=${BUCKET_REGION}" \
+      -var="ami_id=${AMI_ID}" \
       -var="wgcf_address_v6=$IPV6"
     echo "EC2 WireGuard deployment destroyed."
 }
