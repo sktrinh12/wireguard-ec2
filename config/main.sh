@@ -3,7 +3,6 @@
 # $1 up or down
 # $2 device or router
 # $3 profile
-# $4 table name (ohio); also bypass up_vpn / down_vpn just to re-configure
 
 # Exit immediately if any command fails
 set -e
@@ -11,7 +10,7 @@ placeholder=""
 
 # Check for correct number of arguments
 if [[ "$#" -lt 2 ]]; then
-  echo "Usage: $0 {up|down} {router|device} [opt: profile] [opt: table name]"
+  echo "Usage: $0 {up|down} {router|device} [opt: profile]"
   exit 1
 fi
 
@@ -39,15 +38,11 @@ echo "Using profile: $PROFILE"
 # Set profile-specific values
 case "$PROFILE" in
   chom)
-    EIP_ALLOC="eipalloc-0f3204f9f1538ed2f"
-    PUBLIC_IP="34.193.198.229"
     BUCKET_NAME="tf-ec2-state-chom"
     BUCKET_REGION="us-east-1"
     AMI_ID="ami-0e0115d5655e9f3f9"
     ;;
   default)
-    EIP_ALLOC="eipalloc-01506a2704f7f5899"
-    PUBLIC_IP="50.16.66.171"
     BUCKET_NAME="tf-ec2-state"
     BUCKET_REGION="us-east-2"
     AMI_ID="ami-011663bc60ba6ded7"
@@ -57,8 +52,6 @@ case "$PROFILE" in
     exit 1
     ;;
 esac
-
-echo "Using EIP_ALLOC: $EIP_ALLOC / PUBLIC_IP: $PUBLIC_IP"
 
 # Function to handle errors and exit
 handle_error() {
@@ -76,22 +69,61 @@ cd "$HOME/Documents/scripts/terraform/wireguard-ec2"
 WGCF_KEY=$(grep '^key=' .env | cut -d '=' -f2-)
 IPV6=$(grep '^ipv6=' .env | cut -d '=' -f2-)
 
-up_vpn() { 
+allocate_eip() {
+  echo "Allocating EIP..."
+  local result
+  result=$(AWS_PROFILE=${PROFILE} aws ec2 allocate-address --domain vpc --output json)
+  EIP_ALLOC=$(echo "$result" | jq -r '.AllocationId')
+  PUBLIC_IP=$(echo "$result" | jq -r '.PublicIp')
+
   sqlite3 "$DB_NAME" <<EOF
-  CREATE TABLE IF NOT EXISTS $TABLE_NAME (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_private_key TEXT NOT NULL,
-      client_public_key TEXT NOT NULL
-  );
+DELETE FROM eip;
+INSERT INTO eip (allocation_id, public_ip) VALUES ('$EIP_ALLOC', '$PUBLIC_IP');
+EOF
+  echo "Allocated EIP: $PUBLIC_IP ($EIP_ALLOC)"
+}
+
+release_eip() {
+  local alloc_id
+  alloc_id=$(sqlite3 "$DB_NAME" "SELECT allocation_id FROM eip ORDER BY id DESC LIMIT 1;")
+  if [[ -z "$alloc_id" ]]; then
+    echo "No EIP allocation found in DB, skipping release."
+    return
+  fi
+  echo "Releasing EIP: $alloc_id"
+  AWS_PROFILE=${PROFILE} aws ec2 release-address --allocation-id "$alloc_id"
+  sqlite3 "$DB_NAME" "DELETE FROM eip;"
+  echo "EIP released."
+}
+
+up_vpn() {
+  sqlite3 "$DB_NAME" <<EOF
+CREATE TABLE IF NOT EXISTS $TABLE_NAME (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_private_key TEXT NOT NULL,
+    client_public_key TEXT NOT NULL
+);
 EOF
 
-sqlite3 "$DB_NAME" <<EOF
+  sqlite3 "$DB_NAME" <<EOF
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     start_time INTEGER,
     end_time INTEGER
 );
 EOF
+
+  sqlite3 "$DB_NAME" <<EOF
+CREATE TABLE IF NOT EXISTS eip (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    allocation_id TEXT NOT NULL,
+    public_ip TEXT NOT NULL
+);
+EOF
+
+  # allocate EIP on the fly
+  allocate_eip
+  echo "Using EIP_ALLOC: $EIP_ALLOC / PUBLIC_IP: $PUBLIC_IP"
 
   # generate client keys
   echo "Generating client keys..."
@@ -129,44 +161,26 @@ EOF
     -var="bucket_region=${BUCKET_REGION}" \
     -var="ami_id=${AMI_ID}" \
     -var="wgcf_address_v6=$IPV6" || {
-  echo "Terraform apply failed."
-  exit 1
-}
-
+    echo "Terraform apply failed."
+    release_eip
+    exit 1
+  }
 
   echo -e "=========================\nPUBLIC IP AND SERVER KEY\n========================="
   echo "Public IP: $PUBLIC_IP"
   echo "Server Public Key: $SERVER_PUBLIC_KEY"
-
 }
 
 read_keys() {
-  local result
-
-  if [[ "$1" == "ohio" ]]; then
-    table_name="keys_$1"
-  else
-    table_name="$TABLE_NAME"
-  fi
-
-  local second_column="client_public_key"
-  if [[ "$1" == "ohio" ]]; then
-    second_column="server_public_key"
-  fi
-
-  # retrieve public IP and server public key
+  # retrieve server public key from SSM
   SERVER_PUBLIC_KEY=$(aws ssm get-parameter --name "SERVER_PUBLIC_KEY" --query "Parameter.Value" --output text --with-decryption --profile "$PROFILE")
 
-  # retrieve client_private key from sqlite3
-  result=$(sqlite3 $DB_NAME "SELECT client_private_key, $second_column FROM $table_name ORDER BY id DESC LIMIT 1;")
+  # retrieve client private key and public IP from sqlite3
+  local result
+  result=$(sqlite3 $DB_NAME "SELECT client_private_key, client_public_key FROM $TABLE_NAME ORDER BY id DESC LIMIT 1;")
   CLIENT_PRIVATE_KEY=$(echo "$result" | cut -d '|' -f 1)
-
-  if [[ "$1" == "ohio" ]]; then
-    SERVER_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
-    PUBLIC_IP="strinhvpn.duckdns.org"
-  else
-    CLIENT_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
-  fi
+  CLIENT_PUBLIC_KEY=$(echo "$result" | cut -d '|' -f 2)
+  PUBLIC_IP=$(sqlite3 "$DB_NAME" "SELECT public_ip FROM eip ORDER BY id DESC LIMIT 1;")
 }
 
 # upon 'down' of vpn, print out elapsed time
@@ -195,33 +209,35 @@ print_session_time() {
 
 # Function to bring down WireGuard VPN
 down_vpn() {
-    echo "Destroying EC2 WireGuard Terraform deployment..."
-    AWS_PROFILE=${PROFILE} terraform destroy -auto-approve \
-      -var "client_public_key=${CLIENT_PUBLIC_KEY}" \
-      -var "eip_allocation_id=${EIP_ALLOC}" \
-      -var="wgcf_private_key=$WGCF_KEY" \
-      -var="bucket=${BUCKET_NAME}" \
-      -var="bucket_region=${BUCKET_REGION}" \
-      -var="ami_id=${AMI_ID}" \
-      -var="wgcf_address_v6=$IPV6"
-    echo "EC2 WireGuard deployment destroyed."
+  echo "Destroying EC2 WireGuard Terraform deployment..."
+  AWS_PROFILE=${PROFILE} terraform destroy -auto-approve \
+    -var "client_public_key=${CLIENT_PUBLIC_KEY}" \
+    -var "eip_allocation_id=${EIP_ALLOC}" \
+    -var="wgcf_private_key=$WGCF_KEY" \
+    -var="bucket=${BUCKET_NAME}" \
+    -var="bucket_region=${BUCKET_REGION}" \
+    -var="ami_id=${AMI_ID}" \
+    -var="wgcf_address_v6=$IPV6"
+  echo "EC2 WireGuard deployment destroyed."
+
+  release_eip
 }
 
 remove_device_config() {
-    sudo wg-quick down wg0 || true
-    echo "WireGuard VPN client de-configured"
+  sudo wg-quick down wg0 || true
+  echo "WireGuard VPN client de-configured"
 }
 
 config_router() {
   echo "configuring router for wireguard VPN"
   dns_commands=""
   for dns in "${DNS[@]}"; do
-      dns_commands+="uci add_list network.${PEER_NAME}.dns=$dns"$'\n'
+    dns_commands+="uci add_list network.${PEER_NAME}.dns=$dns"$'\n'
   done
 
   ip_commands=""
   for ip in "${ALLOWED_IPS[@]}"; do
-      ip_commands+="uci add_list network.wgserver.allowed_ips=$ip"$'\n'
+    ip_commands+="uci add_list network.wgserver.allowed_ips=$ip"$'\n'
   done
 
   ssh "${USERNAME}@${ROUTER_IP}" << EOF
@@ -241,7 +257,7 @@ config_router() {
     $(echo -e "${dns_commands}")
     uci add_list network.${PEER_NAME}.addresses="${IP_ADDRESS}"
 
-     # Configure WireGuard peer
+    # Configure WireGuard peer
     uci -q delete network.wgserver
     uci set network.wgserver="wireguard_${PEER_NAME}"
     uci set network.wgserver.public_key="${SERVER_PUBLIC_KEY}"
@@ -257,7 +273,6 @@ config_router() {
 EOF
 }
 
-
 config_current_device() {
   echo "configuring current device for wireguard VPN"
   TEMP_CONF=$(mktemp)
@@ -265,7 +280,8 @@ config_current_device() {
   for dns in "${DNS[@]}"; do
     if [ -z "$dns_ips" ]; then
       dns_ips="$dns"
-    else dns_ips+=",$dns"
+    else
+      dns_ips+=",$dns"
     fi
   done
 
@@ -273,7 +289,8 @@ config_current_device() {
   for ip in "${ALLOWED_IPS[@]}"; do
     if [ -z "$allowed_ips" ]; then
       allowed_ips="$ip"
-    else allowed_ips+=",$ip"
+    else
+      allowed_ips+=",$ip"
     fi
   done
 
@@ -293,7 +310,6 @@ EOC
 
   echo "replacing 'wg0.conf' file"
   sudo cp $TEMP_CONF /etc/wireguard/wg0.conf
-  # Clean up the temporary file
   rm $TEMP_CONF
   echo "activating wg interface"
   sudo wg-quick up wg0
@@ -302,12 +318,8 @@ EOC
 remove_router_config() {
   echo "Removing WireGuard configuration from router..."
   ssh "$USERNAME@$ROUTER_IP" << EOF
-    # Remove the WireGuard interface configuration 
     uci -q delete network.wgserver
-
-    # Remove the peer configuration
     uci delete network.$PEER_NAME
-
     uci commit network
     service network restart
 EOF
@@ -331,47 +343,35 @@ case "$2" in
     ;;
 esac
 
-
 # Main logic to handle arguments
 case "$1" in
-    up)
-        if [[ -n $4 ]]; then
-          echo "table name suffix: $4"
-        else
-          up_vpn
-        fi
+  up)
+    up_vpn
+    read_keys
 
-        read_keys "$4"
+    if [ "$2" = "router" ]; then
+      config_router
+    elif [ "$2" = "device" ]; then
+      config_current_device
+    fi
+    echo -e "=========================\nWIREGUARD CONFIGURED\n========================="
+    ;;
+  down)
+    read_keys
 
-        if [ "$2" = "router" ]; then
-          config_router
-        elif [ "$2" = "device" ]; then
-          if [[ "$4" == "ohio" ]]; then
-            sudo wg-quick up strinhcol
-          else
-            config_current_device
-          fi
-        fi
-        echo -e "=========================\nWIREGUARD CONFIGURED\n========================="
-        ;;
-    down)
-        if [ "$2" = "router" ]; then
-          remove_router_config
-          down_vpn
-        elif [ "$2" = "device" ]; then
-          if [[ "$4" == "ohio" ]]; then
-              sudo wg-quick down strinhcol
-          else
-            remove_device_config
-            down_vpn
-          fi
-        fi
-        print_session_time
-        echo -e "=========================\nWIREGUARD DE-CONFIGURED\n========================="
-        ;;
-    *)
-        exit 1
-        ;;
+    if [ "$2" = "router" ]; then
+      remove_router_config
+      down_vpn
+    elif [ "$2" = "device" ]; then
+      remove_device_config
+      down_vpn
+    fi
+    print_session_time
+    echo -e "=========================\nWIREGUARD DE-CONFIGURED\n========================="
+    ;;
+  *)
+    exit 1
+    ;;
 esac
 
 cd $cwd
