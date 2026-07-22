@@ -29,6 +29,7 @@ EIP_ALLOC=""
 DB_NAME="${PEER_NAME}.db"
 DNS=("1.1.1.1" "1.0.0.1")
 TABLE_NAME="keys"
+AMI_ID="ami-0adb5d8e6f28b2ded"
 
 if [[ -n "$3" ]]; then
   PROFILE="$3"
@@ -40,12 +41,10 @@ case "$PROFILE" in
   chom)
     BUCKET_NAME="tf-ec2-state-chom"
     BUCKET_REGION="us-east-1"
-    AMI_ID="ami-0e0115d5655e9f3f9"
     ;;
   default)
     BUCKET_NAME="tf-ec2-state"
     BUCKET_REGION="us-east-2"
-    AMI_ID="ami-011663bc60ba6ded7"
     ;;
   *)
     echo "Unknown profile: $PROFILE. Add it to the profile case block."
