@@ -33,7 +33,7 @@ source "amazon-ebs" "ubuntu-wireguard" {
   profile = var.aws_profile
   source_ami_filter {
     filters = {
-      name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
+      name                = "ubuntu/images/*ubuntu-noble-24.04-amd64-server-*"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
